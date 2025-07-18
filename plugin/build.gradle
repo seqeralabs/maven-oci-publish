@@ -25,13 +25,22 @@ plugins {
     // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
     id 'java-gradle-plugin'
 
-    // Apply the Groovy plugin to add support for Groovy
+    // Apply the Groovy plugin to add support for Groovy (for tests only)
     id 'groovy'
 }
 
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
+}
+
+java {
+    // these settings apply to all jvm tooling, including groovy
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    sourceCompatibility = 17
+    targetCompatibility = 17
 }
 
 dependencies {
@@ -57,9 +66,25 @@ gradlePlugin {
     }
 }
 
-// Add a source set for the functional test suite
+// Configure source sets - Java for main sources, Groovy for tests
 sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        groovy {
+            srcDirs = []  // No main Groovy sources
+        }
+    }
+    test {
+        groovy {
+            srcDirs = ['src/test/groovy']
+        }
+    }
     functionalTest {
+        groovy {
+            srcDirs = ['src/functionalTest/groovy']
+        }
     }
 }
 
