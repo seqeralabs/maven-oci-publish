@@ -33,6 +33,7 @@ public class OciRepository implements Named {
     
     private final String name;
     private final Property<String> url;
+    private final Property<String> namespace;
     private final Property<Boolean> insecure;
     private final Property<Credentials> credentials;
     private final ObjectFactory objectFactory;
@@ -42,6 +43,7 @@ public class OciRepository implements Named {
         this.name = name;
         this.objectFactory = objectFactory;
         this.url = objectFactory.property(String.class);
+        this.namespace = objectFactory.property(String.class);
         this.insecure = objectFactory.property(Boolean.class);
         this.insecure.set(false); // Default to secure
         this.credentials = objectFactory.property(Credentials.class);
@@ -83,6 +85,14 @@ public class OciRepository implements Named {
         this.url.set(url); 
     }
     
+    public Property<String> getNamespace() { 
+        return namespace; 
+    }
+    
+    public void setNamespace(String namespace) { 
+        this.namespace.set(namespace); 
+    }
+    
     public Property<Boolean> getInsecure() { 
         return insecure; 
     }
@@ -93,5 +103,68 @@ public class OciRepository implements Named {
     
     public Property<Credentials> getCredentials() { 
         return credentials; 
+    }
+    
+    /**
+     * Checks if credentials are configured for this repository.
+     * @return true if credentials are present, false for anonymous access
+     */
+    public boolean hasCredentials() {
+        return credentials.isPresent() && credentials.get() != null;
+    }
+    
+    /**
+     * Parses the registry URI to extract host and namespace information.
+     * @return OciRegistryInfo containing parsed registry details
+     */
+    public OciRegistryUriParser.OciRegistryInfo parseRegistryInfo() {
+        if (!url.isPresent()) {
+            throw new IllegalStateException("Registry URL is not configured");
+        }
+        return OciRegistryUriParser.parse(url.get());
+    }
+    
+    /**
+     * Builds an OCI reference for the given Maven coordinates.
+     * @param groupId Maven group ID
+     * @param artifactId Maven artifact ID
+     * @param version Maven version
+     * @return Complete OCI reference string
+     */
+    public String buildOciReference(String groupId, String artifactId, String version) {
+        // Use the new namespace-aware approach
+        if (namespace.isPresent()) {
+            return buildOciReferenceWithNamespace(groupId, artifactId, version);
+        } else {
+            // Fallback to URL parsing approach
+            return parseRegistryInfo().buildOciReference(groupId, artifactId, version);
+        }
+    }
+    
+    /**
+     * Builds an OCI reference using the separate namespace property.
+     * This is Harbor-compatible approach that avoids URL parsing issues.
+     */
+    private String buildOciReferenceWithNamespace(String groupId, String artifactId, String version) {
+        StringBuilder ref = new StringBuilder();
+        
+        // Add registry host (without protocol)
+        String registryUrl = url.get();
+        String host = registryUrl.replaceFirst("^https?://", "");
+        ref.append(host);
+        
+        // Add namespace
+        if (namespace.isPresent()) {
+            ref.append("/").append(namespace.get());
+        }
+        
+        // Add sanitized group
+        String sanitizedGroup = MavenGroupSanitizer.sanitize(groupId);
+        ref.append("/").append(sanitizedGroup);
+        
+        // Add artifact and version
+        ref.append("/").append(artifactId).append(":").append(version);
+        
+        return ref.toString();
     }
 }

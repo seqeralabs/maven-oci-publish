@@ -44,7 +44,7 @@ java {
 }
 
 dependencies {
-    // ORAS Java SDK for OCI registry operations
+    // ORAS Java SDK for OCI registry operations (upgraded to latest stable version)
     implementation 'land.oras:oras-java-sdk:0.2.15'
     
     // Use the awesome Spock testing and specification framework

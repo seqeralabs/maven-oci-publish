@@ -110,6 +110,28 @@ mavenOci {
 }
 ```
 
+### Anonymous Access
+
+For public registries that don't require authentication, simply omit the credentials configuration:
+
+```gradle
+mavenOci {
+    publications {
+        maven(OciPublication) {
+            from components.java
+            repository = 'public-registry.io/maven/my-artifact'
+        }
+    }
+    
+    repositories {
+        publicRegistry(OciRepository) {
+            url = 'https://public-registry.io'
+            // No credentials needed - will use anonymous access
+        }
+    }
+}
+```
+
 ### Using Default Docker Credentials
 
 If you're already logged into a Docker registry, the plugin can use those credentials:
@@ -167,6 +189,27 @@ mavenOci {
 }
 ```
 
+### Publishing to Public Registry (Anonymous)
+
+```gradle
+mavenOci {
+    publications {
+        maven(OciPublication) {
+            from components.java
+            repository = 'public-registry.io/maven/myorg/myapp'
+            tag = project.version
+        }
+    }
+    
+    repositories {
+        publicRegistry(OciRepository) {
+            url = 'https://public-registry.io'
+            // No credentials - uses anonymous access
+        }
+    }
+}
+```
+
 ### Publishing to Multiple Registries
 
 ```gradle
@@ -203,9 +246,10 @@ mavenOci {
 
 The plugin supports several authentication methods:
 
-1. **Username/Password**: Explicitly configured credentials
-2. **Default Docker Credentials**: Uses `~/.docker/config.json`
-3. **Environment Variables**: Can be configured via environment variables
+1. **Anonymous Access**: No credentials required for public registries
+2. **Username/Password**: Explicitly configured credentials
+3. **Default Docker Credentials**: Uses `~/.docker/config.json`
+4. **Environment Variables**: Can be configured via environment variables
 
 ### Using Environment Variables
 
@@ -222,6 +266,255 @@ mavenOci {
     }
 }
 ```
+
+## Accessing Published Libraries
+
+Once you've published your Maven artifacts to an OCI registry, you can access them from other projects just like a regular Maven repository. The key is to use a custom URL resolver or proxy that translates Maven repository requests to OCI registry pulls.
+
+### Using Maven Repository with Custom URL Resolver
+
+The most seamless way to consume OCI-published libraries is to treat the OCI registry as a Maven repository using a custom URL scheme:
+
+```gradle
+// In your consuming project's build.gradle
+repositories {
+    maven {
+        name = "oci-maven-registry"
+        url = uri("oci+https://myregistry.io/maven")
+        credentials {
+            username = project.findProperty('registryUsername')
+            password = project.findProperty('registryPassword')
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.example:my-library:1.0.0'
+}
+```
+
+### Custom Repository Implementation
+
+You can create a custom Gradle plugin that implements a repository resolver for OCI registries:
+
+```gradle
+// Custom OCI repository resolver
+class OciRepositoryResolver implements RepositoryTransport {
+    
+    @Override
+    void get(URI location, File destination) throws IOException {
+        // Convert Maven coordinates to OCI reference
+        String ociRef = convertMavenToOciRef(location)
+        
+        // Use ORAS Java SDK to pull artifact
+        Registry registry = Registry.builder().defaults().build()
+        ContainerRef ref = ContainerRef.parse(ociRef)
+        registry.pullArtifact(ref, destination.getParent())
+    }
+    
+    private String convertMavenToOciRef(URI location) {
+        // Convert: /com/example/my-library/1.0.0/my-library-1.0.0.jar
+        // To: myregistry.io/maven/com.example/my-library:1.0.0
+        // Implementation details...
+    }
+}
+```
+
+### Integration with Existing Build Systems
+
+#### Gradle Project
+
+```gradle
+plugins {
+    id 'java'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+    
+    // OCI registry as Maven repository
+    maven {
+        name = "CompanyOciRegistry"
+        url = uri("oci+https://registry.company.com/maven")
+        credentials {
+            username = System.getenv('REGISTRY_USERNAME')
+            password = System.getenv('REGISTRY_PASSWORD')
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.company:shared-library:2.1.0'
+    implementation 'com.company:common-utils:1.5.0'
+    testImplementation 'junit:junit:4.13.2'
+}
+```
+
+#### Maven Project
+
+```xml
+<project>
+    <repositories>
+        <repository>
+            <id>company-oci-registry</id>
+            <name>Company OCI Registry</name>
+            <url>oci+https://registry.company.com/maven</url>
+        </repository>
+    </repositories>
+    
+    <dependencies>
+        <dependency>
+            <groupId>com.company</groupId>
+            <artifactId>shared-library</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+    </dependencies>
+</project>
+```
+
+### Repository Proxy Service
+
+For organizations, you can set up a proxy service that translates Maven repository requests to OCI pulls:
+
+```yaml
+# docker-compose.yml for OCI-to-Maven proxy
+version: '3.8'
+services:
+  oci-maven-proxy:
+    image: company/oci-maven-proxy:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - REGISTRY_URL=https://registry.company.com
+      - REGISTRY_USERNAME=${REGISTRY_USERNAME}
+      - REGISTRY_PASSWORD=${REGISTRY_PASSWORD}
+    volumes:
+      - ./cache:/app/cache
+```
+
+Then use it as a regular Maven repository:
+
+```gradle
+repositories {
+    maven {
+        name = "OciMavenProxy"
+        url = uri("http://localhost:8080/maven")
+    }
+}
+```
+
+### Automated Resolution
+
+You can also implement automatic resolution that checks multiple sources:
+
+```gradle
+repositories {
+    mavenCentral()
+    
+    // Fallback to OCI registry for internal dependencies
+    maven {
+        name = "InternalOciRegistry"
+        url = uri("oci+https://internal-registry.company.com/maven")
+        credentials {
+            username = System.getenv('INTERNAL_REGISTRY_USERNAME')
+            password = System.getenv('INTERNAL_REGISTRY_PASSWORD')
+        }
+        content {
+            // Only look for company artifacts in OCI registry
+            includeGroup "com.company"
+            includeGroup "com.company.internal"
+        }
+    }
+}
+```
+
+### Complete Lifecycle Example
+
+Here's a complete example showing how to publish a library and consume it:
+
+**1. Publishing Project (`publisher/build.gradle`)**
+```gradle
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'io.seqera.maven-oci-publish' version 'x.x.x'
+}
+
+group = 'com.example'
+version = '1.0.0'
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+mavenOci {
+    publications {
+        maven {
+            from components.java
+            repository = 'maven/com.example/my-library'
+            tag = project.version
+        }
+    }
+    
+    repositories {
+        myRegistry {
+            url = 'https://registry.example.com'
+            credentials {
+                username = project.findProperty('registryUsername')
+                password = project.findProperty('registryPassword')
+            }
+        }
+    }
+}
+```
+
+**2. Publish the library:**
+```bash
+./gradlew publishMavenPublicationToMyRegistryRepository
+```
+
+**3. Consuming Project (`consumer/build.gradle`)**
+```gradle
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+    
+    // Custom OCI repository resolver (implementation depends on your setup)
+    maven {
+        name = "OciMavenRegistry"
+        url = uri("oci+https://registry.example.com/maven")
+        credentials {
+            username = project.findProperty('registryUsername')
+            password = project.findProperty('registryPassword')
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.example:my-library:1.0.0'
+}
+```
+
+**4. Use the library:**
+```java
+import com.example.MyLibrary;
+
+public class MyApp {
+    public static void main(String[] args) {
+        MyLibrary.doSomething(); // Use the OCI-published library
+    }
+}
+```
+
+This approach allows you to treat OCI registries as Maven repositories, making them seamlessly integrated into your build process.
 
 ## Supported Registries
 

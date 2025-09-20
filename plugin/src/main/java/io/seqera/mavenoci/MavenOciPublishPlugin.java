@@ -21,15 +21,21 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.component.SoftwareComponent;
 import org.gradle.api.credentials.PasswordCredentials;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.util.GradleVersion;
 
+import java.util.stream.Collectors;
+
 /**
- * A Gradle plugin for publishing Maven artifacts to OCI registries
+ * A Gradle plugin for publishing and consuming Maven artifacts to/from OCI registries
  */
 public class MavenOciPublishPlugin implements Plugin<Project> {
+    
+    private static final Logger logger = Logging.getLogger(MavenOciPublishPlugin.class);
     
     public static final String EXTENSION_NAME = "mavenOci";
     public static final String PUBLISH_TASK_GROUP = "publishing";
@@ -41,7 +47,9 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             throw new IllegalStateException("This plugin requires Gradle 6.0 or later");
         }
         
-        // Create the extension
+        logger.info("Applying Maven OCI plugin to project: {}", project.getName());
+        
+        // Create the publishing extension
         MavenOciPublishingExtension extension = project.getExtensions().create(
             EXTENSION_NAME, 
             MavenOciPublishingExtension.class,
@@ -50,6 +58,12 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
         
         // Apply the maven-publish plugin to leverage its components
         project.getPluginManager().apply("maven-publish");
+        
+        // Add consumer functionality (OCI repositories)
+        setupConsumerSupport(project);
+        
+        // Install dependency resolution interceptor
+        OciDependencyResolutionInterceptor.install(project);
         
         // Create tasks after project evaluation
         project.afterEvaluate(p -> createPublishingTasks(p, extension));
@@ -77,13 +91,37 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             task.setDescription("Publishes OCI publication '" + publication.getName() + "' to repository '" + repository.getName() + "'");
             task.setGroup(PUBLISH_TASK_GROUP);
             
-            // Configure task inputs
-            task.getPublication().set(publication);
-            task.getOciRepository().set(repository);
+            // Configure task inputs (configuration cache compatible)
+            task.getPublicationName().set(publication.getName());
+            task.getRepositoryName().set(repository.getName());
             task.getRegistryUrl().set(repository.getUrl());
             task.getInsecure().set(repository.getInsecure());
+            task.getExecutionId().set(System.currentTimeMillis() + "-" + publication.getName() + "-" + repository.getName());
             
-            // Configure repository and tag
+            // Configure namespace if provided
+            if (repository.getNamespace().isPresent()) {
+                task.getNamespace().set(repository.getNamespace());
+            }
+            
+            // Configure Maven coordinates for new coordinate mapping
+            task.getGroupId().set(project.getGroup().toString());
+            task.getVersion().set(project.getVersion().toString());
+            
+            // Try to get artifactId from Maven publication, fallback to project name
+            PublishingExtension publishingExt = project.getExtensions().findByType(PublishingExtension.class);
+            if (publishingExt != null) {
+                publishingExt.getPublications().withType(MavenPublication.class).all(mavenPub -> {
+                    if (mavenPub.getArtifactId() != null) {
+                        task.getArtifactId().set(mavenPub.getArtifactId());
+                    } else {
+                        task.getArtifactId().set(project.getName());
+                    }
+                });
+            } else {
+                task.getArtifactId().set(project.getName());
+            }
+            
+            // Configure repository and tag (for backward compatibility)
             if (publication.getRepository().isPresent()) {
                 task.getRepository().set(publication.getRepository());
             }
@@ -104,16 +142,28 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                 }
             }
             
-            // Configure artifacts
+            // Configure artifacts - use lazy providers to ensure Maven publication artifacts are available
             if (publication.getComponent().isPresent()) {
-                // Add artifacts from software component
-                addArtifactsFromComponent(publication.getComponent().get(), project, task);
+                // Add artifacts from software component using lazy evaluation
+                configureArtifactsFromComponent(publication.getComponent().get(), project, task);
             }
             
             // Add custom artifacts
             publication.getArtifacts().get().forEach(artifact -> 
                 task.getArtifacts().from(artifact.getFile())
             );
+            
+            // Ensure the task depends on the build tasks that create the artifacts
+            try {
+                task.dependsOn(project.getTasks().named("jar"));
+            } catch (Exception e) {
+                // jar task may not exist, that's ok
+            }
+            try {
+                task.dependsOn(project.getTasks().named("build"));
+            } catch (Exception e) {
+                // build task may not exist, that's ok
+            }
         });
         
         // Wire the task to the lifecycle task
@@ -122,10 +172,41 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
         );
     }
     
-    private void addArtifactsFromComponent(SoftwareComponent component, Project project, PublishToOciRepositoryTask task) {
-        // For now, we'll rely on explicit artifact configuration
-        // Component handling can be implemented later if needed
-        // In practice, users should explicitly configure artifacts in the OCI publication
+    private void configureArtifactsFromComponent(SoftwareComponent component, Project project, PublishToOciRepositoryTask task) {
+        // Use lazy configuration to add artifacts from Maven publications
+        PublishingExtension publishingExtension = project.getExtensions().getByType(PublishingExtension.class);
+        
+        // Configure artifacts lazily by depending on the jar task and using lazy providers
+        task.getArtifacts().from(project.provider(() -> {
+            return publishingExtension.getPublications().withType(MavenPublication.class)
+                .stream()
+                .flatMap(mavenPublication -> mavenPublication.getArtifacts().stream())
+                .filter(artifact -> artifact.getFile() != null)
+                .map(artifact -> artifact.getFile())
+                .collect(Collectors.toList());
+        }));
+    }
+    
+    /**
+     * Sets up consumer support for OCI repositories.
+     * This enables the ociRepositories DSL block for consuming Maven artifacts from OCI registries.
+     * 
+     * @param project The project to configure
+     */
+    private void setupConsumerSupport(Project project) {
+        logger.info("Setting up OCI repository consumer support for project: {}", project.getName());
+        
+        // Create the OCI repository handler
+        OciRepositoryHandler ociHandler = project.getObjects().newInstance(
+            OciRepositoryHandler.class, 
+            project.getObjects(),
+            project
+        );
+        
+        // Add as a project extension
+        project.getExtensions().add("ociRepositories", ociHandler);
+        
+        logger.info("OCI repository consumer support enabled. Use 'ociRepositories { ... }' to configure OCI registries.");
     }
     
     private String capitalize(String str) {
