@@ -135,7 +135,8 @@ public class MavenOciResolver {
             return true;
             
         } catch (Exception e) {
-            logger.debug("Failed to resolve Maven artifacts from OCI registry: {}", e.getMessage(), e);
+            logger.debug("Failed to resolve Maven artifacts from OCI registry {} ({}:{}:{}): {}", 
+                       registryUrl, groupId, artifactId, version, e.getMessage(), e);
             return false;
         }
     }
@@ -221,7 +222,8 @@ public class MavenOciResolver {
             }
             
         } catch (Exception e) {
-            logger.debug("Artifacts do not exist or are not accessible: {}", e.getMessage());
+            logger.debug("Artifacts do not exist or are not accessible from OCI registry {} ({}:{}:{}): {}", 
+                       registryUrl, groupId, artifactId, version, e.getMessage());
             return false;
         }
     }

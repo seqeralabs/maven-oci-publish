@@ -246,8 +246,8 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
             logger.info("Successfully published artifacts. Schema version: {}", manifest.getSchemaVersion());
             
         } catch (Exception e) {
-            logger.error("Failed to publish to OCI registry", e);
-            throw new GradleException("Failed to publish to OCI registry: " + e.getMessage(), e);
+            logger.error("Failed to publish to OCI registry: {}", getRegistryUrl().get(), e);
+            throw new GradleException("Failed to publish to OCI registry " + getRegistryUrl().get() + ": " + e.getMessage(), e);
         }
     }
     
@@ -411,7 +411,7 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
             return true;
         } catch (Exception e) {
             // If we get any exception (404, 401, etc.), assume package doesn't exist
-            logger.debug("Package does not exist or is not accessible: {}", e.getMessage());
+            logger.debug("Package does not exist or is not accessible from OCI registry {}: {}", getRegistryUrl().get(), e.getMessage());
             return false;
         }
     }

@@ -387,12 +387,13 @@ public class MavenOciRepositoryFactory {
                 
             } catch (Exception e) {
                 // Silently ignore all OCI resolution errors - this allows the normal repository chain to continue
-                logger.debug("OCI resolution failed for {}:{}:{} (continuing with normal resolution): {}", 
-                           groupId, artifactId, version, e.getMessage());
+                logger.debug("OCI resolution failed for {}:{}:{} from repository '{}' (continuing with normal resolution): {}", 
+                           groupId, artifactId, version, repositoryName, e.getMessage());
             }
             
         } catch (Exception e) {
-            logger.debug("Error ensuring artifact in cache: {}:{}:{}", groupId, artifactId, version, e);
+            logger.debug("Error ensuring artifact in cache: {}:{}:{} from repository '{}': {}", 
+                       groupId, artifactId, version, repositoryName, e.getMessage(), e);
         }
     }
     
