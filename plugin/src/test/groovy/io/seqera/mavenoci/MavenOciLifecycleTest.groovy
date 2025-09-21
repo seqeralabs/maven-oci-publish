@@ -111,7 +111,7 @@ class MavenOciLifecycleTest extends Specification {
             }
             
             // Configure OCI-specific publishing settings
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java                    // Same component as Maven publish
@@ -250,11 +250,9 @@ class MavenOciLifecycleTest extends Specification {
             
             repositories {
                 mavenCentral()  // Standard Maven dependencies
-            }
-            
-            // Configure OCI repository for dependency resolution
-            ociRepositories {
-                testRegistry {
+                
+                // Create OCI repository using named factory method
+                oci("testRegistry") { 
                     url = 'http://${registryUrl}'
                     insecure = true
                 }

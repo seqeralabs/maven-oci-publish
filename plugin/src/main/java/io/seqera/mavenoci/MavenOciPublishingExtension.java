@@ -18,25 +18,48 @@ package io.seqera.mavenoci;
 
 import org.gradle.api.Action;
 import org.gradle.api.NamedDomainObjectContainer;
+import org.gradle.api.Project;
+import org.gradle.api.artifacts.repositories.ArtifactRepository;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 import org.gradle.api.model.ObjectFactory;
+import groovy.lang.Closure;
 
 import javax.inject.Inject;
 
 /**
- * Main extension for OCI publishing configuration.
- * Provides the 'mavenOci' DSL block for configuring OCI publication.
+ * Main extension for OCI publishing and repository configuration.
+ * Provides the 'mavenOci' DSL block for configuring OCI publication and repositories.
  */
 public class MavenOciPublishingExtension {
+    
+    private static final Logger logger = Logging.getLogger(MavenOciPublishingExtension.class);
     
     private final NamedDomainObjectContainer<OciPublication> publications;
     private final NamedDomainObjectContainer<OciRepository> repositories;
     private final ObjectFactory objectFactory;
+    private Project project;
     
     @Inject
     public MavenOciPublishingExtension(ObjectFactory objectFactory) {
         this.objectFactory = objectFactory;
         this.publications = objectFactory.domainObjectContainer(OciPublication.class);
         this.repositories = objectFactory.domainObjectContainer(OciRepository.class);
+    }
+    
+    /**
+     * Sets the project context for repository factory operations.
+     * This is called by the plugin during setup.
+     */
+    public void setProject(Project project) {
+        this.project = project;
+    }
+    
+    /**
+     * Gets the project context.
+     */
+    public Project getProject() {
+        return project;
     }
     
     /**
@@ -66,4 +89,33 @@ public class MavenOciPublishingExtension {
     public NamedDomainObjectContainer<OciRepository> getRepositories() {
         return repositories;
     }
+    
+    /**
+     * Creates an OCI repository using a named approach similar to maven repositories.
+     * This enables: oci("name") { url = "http://..." }
+     */
+    public ArtifactRepository call(String name, Closure<?> closure) {
+        if (project == null) {
+            throw new IllegalStateException("Project context not set. This method should be called after plugin application.");
+        }
+        
+        logger.info("Creating named OCI repository '{}' using closure syntax", name);
+        
+        // Create OCI repository specification with the provided name
+        OciRepositorySpec spec = objectFactory.newInstance(OciRepositorySpec.class, name);
+        
+        // Configure using the spec as delegate (isolated from project context)
+        closure.setDelegate(spec);
+        closure.setResolveStrategy(Closure.DELEGATE_FIRST);
+        closure.call();
+        
+        logger.info("Creating OCI repository '{}' with URL: {}", spec.getName(), spec.getUrl().getOrNull());
+        
+        // Create and register Maven repository that wraps OCI functionality
+        return project.getRepositories().maven(mavenRepo -> {
+            mavenRepo.setName(spec.getName());
+            OciMavenRepositoryFactory.createOciMavenRepository(spec, mavenRepo, project);
+        });
+    }
+    
 }

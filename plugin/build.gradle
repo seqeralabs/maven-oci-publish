@@ -50,8 +50,8 @@ dependencies {
     // Use the awesome Spock testing and specification framework
     testImplementation libs.spock.core
     
-    // Testcontainers for integration testing
-    testImplementation 'org.testcontainers:testcontainers:1.19.3'
+    // Testcontainers for integration testing (updated to latest stable version)
+    testImplementation 'org.testcontainers:testcontainers:1.20.4'
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -81,28 +81,6 @@ sourceSets {
             srcDirs = ['src/test/groovy']
         }
     }
-    functionalTest {
-        groovy {
-            srcDirs = ['src/functionalTest/groovy']
-        }
-    }
-}
-
-configurations.functionalTestImplementation.extendsFrom(configurations.testImplementation)
-configurations.functionalTestRuntimeOnly.extendsFrom(configurations.testRuntimeOnly)
-
-// Add a task to run the functional tests
-tasks.register('functionalTest', Test) {
-    testClassesDirs = sourceSets.functionalTest.output.classesDirs
-    classpath = sourceSets.functionalTest.runtimeClasspath
-    useJUnitPlatform()
-}
-
-gradlePlugin.testSourceSets.add(sourceSets.functionalTest)
-
-tasks.named('check') {
-    // Run the functional tests as part of `check`
-    dependsOn(tasks.functionalTest)
 }
 
 tasks.named('test') {

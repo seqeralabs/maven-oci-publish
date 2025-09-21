@@ -139,7 +139,7 @@ class MavenOciLifecycleWithAuthTest extends Specification {
                 }
             }
             
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java

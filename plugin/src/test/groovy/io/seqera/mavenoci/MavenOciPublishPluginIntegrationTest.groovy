@@ -64,7 +64,7 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
                 }
             }
             
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java
@@ -137,7 +137,7 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
                 }
             }
             
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java
@@ -179,7 +179,7 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
                 id 'io.seqera.maven-oci-publish'
             }
             
-            mavenOci {
+            oci {
                 // Empty configuration
             }
         """

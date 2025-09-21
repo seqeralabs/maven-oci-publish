@@ -1,0 +1,4 @@
+// Include the plugin project as a composite build
+includeBuild('../../')
+
+rootProject.name = 'oci-publisher-example'

@@ -43,7 +43,7 @@ publishing {
 }
 
 // Configure OCI publishing
-mavenOci {
+oci {
     publications {
         maven(OciPublication) {
             from components.java
@@ -67,7 +67,7 @@ mavenOci {
 ### Advanced Configuration
 
 ```gradle
-mavenOci {
+oci {
     publications {
         // Publication with custom artifacts
         customMaven(OciPublication) {
@@ -115,7 +115,7 @@ mavenOci {
 For public registries that don't require authentication, simply omit the credentials configuration:
 
 ```gradle
-mavenOci {
+oci {
     publications {
         maven(OciPublication) {
             from components.java
@@ -137,7 +137,7 @@ mavenOci {
 If you're already logged into a Docker registry, the plugin can use those credentials:
 
 ```gradle
-mavenOci {
+oci {
     publications {
         maven(OciPublication) {
             from components.java
@@ -168,7 +168,7 @@ Common tasks:
 ### Publishing to GitHub Container Registry
 
 ```gradle
-mavenOci {
+oci {
     publications {
         maven(OciPublication) {
             from components.java
@@ -192,7 +192,7 @@ mavenOci {
 ### Publishing to Public Registry (Anonymous)
 
 ```gradle
-mavenOci {
+oci {
     publications {
         maven(OciPublication) {
             from components.java
@@ -213,7 +213,7 @@ mavenOci {
 ### Publishing to Multiple Registries
 
 ```gradle
-mavenOci {
+oci {
     publications {
         maven(OciPublication) {
             from components.java
@@ -254,7 +254,7 @@ The plugin supports several authentication methods:
 ### Using Environment Variables
 
 ```gradle
-mavenOci {
+oci {
     repositories {
         myRegistry(OciRepository) {
             url = 'https://myregistry.io'
@@ -269,22 +269,30 @@ mavenOci {
 
 ## Accessing Published Libraries
 
-Once you've published your Maven artifacts to an OCI registry, you can access them from other projects just like a regular Maven repository. The key is to use a custom URL resolver or proxy that translates Maven repository requests to OCI registry pulls.
+Once you've published your Maven artifacts to an OCI registry, you can access them from other projects using the plugin's built-in consumption support.
 
-### Using Maven Repository with Custom URL Resolver
+### Using OCI Repository Configuration
 
-The most seamless way to consume OCI-published libraries is to treat the OCI registry as a Maven repository using a custom URL scheme:
+The plugin provides seamless consumption of OCI-published libraries by configuring OCI repositories in the standard `repositories` block:
 
 ```gradle
 // In your consuming project's build.gradle
+plugins {
+    id 'java'
+    id 'io.seqera.maven-oci-publish' version 'x.x.x'
+}
+
 repositories {
-    maven {
-        name = "oci-maven-registry"
-        url = uri("oci+https://myregistry.io/maven")
-        credentials {
-            username = project.findProperty('registryUsername')
-            password = project.findProperty('registryPassword')
-        }
+    mavenCentral()
+    
+    // Configure OCI repositories for dependency resolution
+    oci("myRegistry") {
+        url = 'https://myregistry.io'
+    }
+    
+    oci("localRegistry") {
+        url = 'http://localhost:5000'
+        insecure = true  // Allow HTTP connections
     }
 }
 
@@ -292,6 +300,26 @@ dependencies {
     implementation 'com.example:my-library:1.0.0'
 }
 ```
+
+### With Authentication
+
+For private registries, the plugin automatically uses Docker credentials from `~/.docker/config.json` if available, or you can configure authentication through environment variables or system properties that the underlying ORAS SDK can access.
+
+```gradle
+repositories {
+    mavenCentral()
+    
+    // Configure authenticated OCI repository (uses Docker credentials if available)
+    oci("privateRegistry") {
+        url = 'https://private.registry.io'
+    }
+}
+```
+
+The plugin leverages the ORAS Java SDK's built-in authentication mechanisms, which support:
+- Docker configuration files (`~/.docker/config.json`)
+- Environment variables (`DOCKER_USERNAME`, `DOCKER_PASSWORD`)
+- Registry-specific authentication flows
 
 ### Custom Repository Implementation
 

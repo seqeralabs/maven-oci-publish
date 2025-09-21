@@ -164,7 +164,7 @@ class MavenOciPublishPluginContainerTest extends Specification {
             }
             
             // Configure OCI-specific publishing settings
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java        // Mirror the Maven publication
@@ -227,7 +227,7 @@ class MavenOciPublishPluginContainerTest extends Specification {
                 }
             }
             
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java
@@ -288,7 +288,7 @@ class MavenOciPublishPluginContainerTest extends Specification {
                 }
             }
             
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java
@@ -346,7 +346,7 @@ class MavenOciPublishPluginContainerTest extends Specification {
                 }
             }
             
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java
@@ -431,7 +431,7 @@ class MavenOciPublishPluginContainerTest extends Specification {
                 }
             }
             
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java
@@ -506,7 +506,7 @@ class MavenOciPublishPluginContainerTest extends Specification {
             }
             
             // OCI publishing configuration with unreachable registry
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java        // Mirror Maven publication (empty)
@@ -572,7 +572,7 @@ class MavenOciPublishPluginContainerTest extends Specification {
             }
             
             // OCI publishing configuration
-            mavenOci {
+            oci {
                 publications {
                     maven {
                         from components.java           // Same artifacts as Maven

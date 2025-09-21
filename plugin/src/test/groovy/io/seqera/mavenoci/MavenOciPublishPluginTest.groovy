@@ -45,10 +45,10 @@ class MavenOciPublishPluginTest extends Specification {
         // plugins { id 'io.seqera.maven-oci-publish' }
         project.plugins.apply("io.seqera.maven-oci-publish")
 
-        then: "The plugin should create the 'mavenOci' DSL extension"
+        then: "The plugin should create the 'oci' DSL extension"
         // Validates that the plugin registers its DSL extension properly
-        // This extension allows users to configure: mavenOci { publications { ... } repositories { ... } }
-        project.extensions.findByName("mavenOci") != null
+        // This extension allows users to configure: oci { publications { ... } repositories { ... } }
+        project.extensions.findByName("oci") != null
         
         and: "The plugin should create the lifecycle task 'publishToOciRegistries'"
         // Validates that the plugin creates the main lifecycle task

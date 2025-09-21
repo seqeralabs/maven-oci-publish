@@ -17,15 +17,11 @@ Project inspired to https://github.com/Tosan/oras-maven-plugin.
 # Run unit tests
 ./gradlew test
 
-# Run functional tests (integration tests)
-./gradlew functionalTest
-
 # Run all tests
 ./gradlew check
 
 # Run a specific test
 ./gradlew test --tests "MavenOciPublishPluginTest"
-./gradlew functionalTest --tests "MavenOciPublishPluginIntegrationTest"
 
 # Apply plugin to example project
 cd example && ./gradlew publishToOciRegistries --dry-run
@@ -38,17 +34,19 @@ cd example && ./gradlew publishToOciRegistries --dry-run
 The plugin follows a standard Gradle plugin architecture with these key components:
 
 - **MavenOciPublishPlugin** - Main plugin class that applies the plugin, creates DSL extension, and generates publishing tasks
-- **MavenOciPublishingExtension** - Provides the `mavenOci` DSL block for configuration
+- **MavenOciPublishingExtension** - Provides the `oci` DSL block for configuration and repository registration
 - **OciPublication** - Domain object representing what to publish (similar to MavenPublication)
-- **OciRepository** - Domain object representing where to publish (OCI registry configuration)
+- **OciRepository** - Domain object representing where to publish (OCI registry configuration for publishing)
+- **OciRepositorySpec** - Domain object for consuming from OCI repositories
 - **PublishToOciRepositoryTask** - Task implementation that performs the actual publishing using ORAS Java SDK
 
 ### Plugin Flow
 
-1. Plugin applies and creates `mavenOci` DSL extension
+1. Plugin applies and creates `oci` DSL extension
 2. Users configure publications and repositories in build scripts
-3. After project evaluation, plugin creates publishing tasks for each publication-repository combination
-4. Tasks use ORAS Java SDK to push Maven artifacts to OCI registries with proper media types
+3. For consumption, users configure OCI repositories using `repositories { oci("name") { url = "..."; insecure = true } }`
+4. After project evaluation, plugin creates publishing tasks for each publication-repository combination
+5. Tasks use ORAS Java SDK to push Maven artifacts to OCI registries with proper media types
 
 ### Key Dependencies
 
@@ -66,15 +64,61 @@ The plugin follows a standard Gradle plugin architecture with these key componen
 - **MavenOciPublishPluginContainerTest** - Container-based integration tests
 - Uses Spock framework with Gradle's `ProjectBuilder` and Testcontainers
 
-### Functional Tests (`plugin/src/functionalTest/groovy/`)
-- Integration tests using Gradle TestKit
-- Tests task creation, plugin integration, and configuration handling
-- Runs against real Gradle builds in temporary directories
 
 ### Example Project (`example/`)
 - Demonstrates plugin usage patterns
 - Shows integration with standard Maven publishing
 - Includes examples for GitHub Container Registry and local registry
+
+## Repository Configuration
+
+### For Consuming Artifacts from OCI Registries
+
+To consume artifacts from OCI registries, configure OCI repositories using the named factory method within the `repositories` block:
+
+```gradle
+repositories {
+    mavenCentral()
+    
+    // Configure OCI repositories for dependency resolution
+    oci("seqeraPublic") {
+        url = 'https://seqera.io/oci-registry'
+    }
+    
+    oci("localRegistry") {
+        url = 'http://localhost:5000'
+        insecure = true
+    }
+}
+
+dependencies {
+    implementation 'com.example:my-library:1.0.0'
+}
+```
+
+### For Publishing Artifacts to OCI Registries
+
+Publishing uses the standard `oci` DSL block:
+
+```gradle
+oci {
+    publications {
+        maven {
+            from components.java
+        }
+    }
+    
+    repositories {
+        seqeraPublic {
+            url = 'https://seqera.io/oci-registry'
+            credentials {
+                username = project.findProperty('oci.username')
+                password = project.findProperty('oci.password')
+            }
+        }
+    }
+}
+```
 
 ## Development Notes
 

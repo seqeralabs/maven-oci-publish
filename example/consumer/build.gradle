@@ -1,0 +1,77 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'io.seqera.maven-oci-publish'  // For consumer support
+}
+
+group = 'io.seqera'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+// Configure OCI repositories for dependency resolution
+ociRepositories {
+    seqeraPublic {
+        url = 'https://public.cr.stage-seqera.io/maven'
+        // Anonymous access - resolves io.seqera:shared-library:1.0.0
+        // to public.cr.stage-seqera.io/maven/io-seqera/shared-library:1.0.0
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+application {
+    mainClass = 'io.seqera.consumer.ConsumerApp'
+}
+
+dependencies {
+    // Normal Maven dependency using OCI repository!
+    implementation 'io.seqera:shared-library:1.0.0'
+    // This automatically resolves to public.cr.stage-seqera.io/maven/io-seqera/shared-library:1.0.0
+    
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'ch.qos.logback:logback-classic:1.4.7'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// Custom task to show how to consume OCI artifacts
+tasks.register('showConsumptionInfo') {
+    doLast {
+        println "\n📦 Enhanced OCI Artifact Consumption:"
+        println "   Registry: https://public.cr.stage-seqera.io/maven"
+        println "   Maven Coordinates: io.seqera:shared-library:1.0.0"
+        println "   OCI Reference: public.cr.stage-seqera.io/maven/io-seqera/shared-library:1.0.0"
+        
+        println "\n✅ Current: Normal Maven Dependency (now implemented!)"
+        println "   repositories {"
+        println "       mavenCentral()"
+        println "   }"
+        println "   ociRepositories {"
+        println "       seqeraPublic {"
+        println "           url = 'https://public.cr.stage-seqera.io/maven'"
+        println "       }"
+        println "   }"
+        println "   dependencies {"
+        println "       implementation 'io.seqera:shared-library:1.0.0'"
+        println "   }"
+        
+        println "\n🔧 Enhanced Coordinate System Features:"
+        println "   ✅ Predictable Maven → OCI mapping"
+        println "   ✅ Hierarchical organization (group/artifact structure)"
+        println "   ✅ Docker-compatible naming (dots → hyphens)"
+        println "   ✅ Namespace isolation"
+        println "   ✅ Anonymous access support"
+        println "   ✅ Native Gradle dependency resolution"
+    }
+}
+

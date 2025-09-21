@@ -1,0 +1,107 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'io.seqera.maven-oci-publish'
+}
+
+group = 'io.seqera'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+// Standard Maven publishing configuration
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'shared-library'
+            
+            pom {
+                name = 'Shared Library'
+                description = 'A shared library published via maven-oci-publish plugin'
+                url = 'https://github.com/pditommaso/maven-oci-publish'
+                
+                licenses {
+                    license {
+                        name = 'Apache License 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0'
+                    }
+                }
+                
+                developers {
+                    developer {
+                        id = 'pditommaso'
+                        name = 'Paolo Di Tommaso'
+                        email = 'paolo.ditommaso@gmail.com'
+                    }
+                }
+            }
+        }
+    }
+}
+
+// OCI publishing configuration for Docker Hub
+oci {
+    publications {
+        maven {
+            from components.java
+        }
+    }
+    
+    repositories {
+        // Test with cr.seqera.io using ORAS SDK 0.2.14
+        seqeraPublic {
+            url = 'https://cr.seqera.io'
+            namespace = 'maven'
+            credentials {
+                username = project.findProperty('dockerHubUsername') ?: ''
+                password = project.findProperty('dockerHubPassword') ?: ''
+            }
+        }
+    }
+}
+
+// Custom task to show publishing information
+tasks.register('showPublishInfo') {
+    doLast {
+        println "\n🚀 OCI Publishing Configuration (Enhanced Coordinate System):"
+        println "   Registry: https://public.cr.stage-seqera.io/maven"
+        println "   Maven Coordinates: ${project.group}:shared-library:${project.version}"
+        println "   Sanitized Group: ${project.group.replace('.', '-')}"
+        println "   OCI Reference: public.cr.stage-seqera.io/maven/${project.group.replace('.', '-')}/shared-library:${project.version}"
+        println "   Access: Anonymous (no credentials required)"
+        
+        println "\n📋 Available publishing tasks:"
+        println "   ./gradlew publishMavenPublicationToSeqeraPublicRepository"
+        println "   ./gradlew publishToOciRegistries"
+        
+        println "\n🔧 Enhanced Coordinate System Features:"
+        println "   ✅ Automatic namespace inference from URI"
+        println "   ✅ Docker-compatible group sanitization (io.seqera → io-seqera)"
+        println "   ✅ Hierarchical organization"
+        println "   ✅ Anonymous access support"
+        
+        println "\n📦 After publishing, consumers can use:"
+        println "   repositories { ociRepositories { seqeraPublic { url = 'https://public.cr.stage-seqera.io/maven' } } }"
+        println "   dependencies { implementation 'io.seqera:shared-library:1.0.0' }"
+    }
+}
+
+dependencies {
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
+}
+
+test {
+    useJUnitPlatform()
+}

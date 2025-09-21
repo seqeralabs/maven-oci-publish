@@ -37,7 +37,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
     
     private static final Logger logger = Logging.getLogger(MavenOciPublishPlugin.class);
     
-    public static final String EXTENSION_NAME = "mavenOci";
+    public static final String EXTENSION_NAME = "oci";
     public static final String PUBLISH_TASK_GROUP = "publishing";
     
     @Override
@@ -56,11 +56,13 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             project.getObjects()
         );
         
+        // Set project context for repository factory operations
+        extension.setProject(project);
+        
         // Apply the maven-publish plugin to leverage its components
         project.getPluginManager().apply("maven-publish");
         
-        // Add consumer functionality (OCI repositories)
-        setupConsumerSupport(project);
+        // Note: OCI repository configuration is now handled directly through oci { ... } syntax
         
         // Install dependency resolution interceptor
         OciDependencyResolutionInterceptor.install(project);
@@ -187,27 +189,6 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
         }));
     }
     
-    /**
-     * Sets up consumer support for OCI repositories.
-     * This enables the ociRepositories DSL block for consuming Maven artifacts from OCI registries.
-     * 
-     * @param project The project to configure
-     */
-    private void setupConsumerSupport(Project project) {
-        logger.info("Setting up OCI repository consumer support for project: {}", project.getName());
-        
-        // Create the OCI repository handler
-        OciRepositoryHandler ociHandler = project.getObjects().newInstance(
-            OciRepositoryHandler.class, 
-            project.getObjects(),
-            project
-        );
-        
-        // Add as a project extension
-        project.getExtensions().add("ociRepositories", ociHandler);
-        
-        logger.info("OCI repository consumer support enabled. Use 'ociRepositories { ... }' to configure OCI registries.");
-    }
     
     private String capitalize(String str) {
         if (str == null || str.isEmpty()) {
