@@ -100,7 +100,7 @@ class MavenOciLifecycleIntegrationTest extends Specification {
                 mavenCentral()
             }
             
-            // Configure standard Maven publishing (required by our plugin)
+            // Configure Maven publishing with OCI registry
             publishing {
                 publications {
                     maven(MavenPublication) {
@@ -108,23 +108,11 @@ class MavenOciLifecycleIntegrationTest extends Specification {
                         artifactId = 'test-library' // Override default project name
                     }
                 }
-            }
-            
-            // Configure OCI-specific publishing settings
-            oci {
-                publications {
-                    maven {
-                        from components.java                    // Same component as Maven publish
-                        repository = 'maven/com.example/test-library' // Legacy repository format
-                        tag = project.version                   // Use project version as OCI tag
-                    }
-                }
                 
-                // Define where to publish (OCI registry configuration)
                 repositories {
-                    testRegistry {
-                        url = 'http://${registryUrl}'  // Use HTTP for testing (not production!)
-                        insecure = true                // Allow HTTP connections
+                    oci('testRegistry') {
+                        url = 'http://${registryUrl}/maven'  // Use HTTP for testing with namespace in URL
+                        insecure = true                      // Allow HTTP connections
                     }
                 }
             }
@@ -253,7 +241,7 @@ class MavenOciLifecycleIntegrationTest extends Specification {
                 
                 // Create OCI repository using named factory method
                 oci("testRegistry") { 
-                    url = 'http://${registryUrl}'
+                    url = 'http://${registryUrl}/maven'  // Include namespace in URL path
                     insecure = true
                 }
             }

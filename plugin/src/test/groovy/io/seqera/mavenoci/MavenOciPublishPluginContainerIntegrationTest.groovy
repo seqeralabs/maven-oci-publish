@@ -153,31 +153,18 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                 mavenCentral()
             }
             
-            // Configure standard Maven publishing
-            // This creates the Maven publication that will be mirrored to OCI
+            // Configure Maven publishing with OCI registry
             publishing {
                 publications {
                     maven(MavenPublication) {
                         from components.java  // Include main JAR and generated POM
                     }
                 }
-            }
-            
-            // Configure OCI-specific publishing settings
-            oci {
-                publications {
-                    maven {
-                        from components.java        // Mirror the Maven publication
-                        repository = 'test-project' // OCI repository/namespace
-                        tag = project.version       // Use project version as OCI tag
-                    }
-                }
                 
-                // Define the target OCI registry
                 repositories {
-                    testRegistry {
-                        url = 'http://${registryUrl}' // HTTP for testing (not secure)
-                        insecure = true               // Allow HTTP connections
+                    oci('testRegistry') {
+                        url = 'http://${registryUrl}/maven' // HTTP for testing with namespace in URL
+                        insecure = true                      // Allow HTTP connections
                     }
                 }
             }
@@ -225,20 +212,10 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                         from components.java
                     }
                 }
-            }
-            
-            oci {
-                publications {
-                    maven {
-                        from components.java
-                        repository = 'authenticated-project'
-                        tag = project.version
-                    }
-                }
                 
                 repositories {
-                    testRegistry {
-                        url = 'http://${registryUrl}'
+                    oci('testRegistry') {
+                        url = 'http://${registryUrl}/maven' // Include namespace in URL
                         insecure = true
                         credentials {
                             username = 'testuser'
@@ -286,20 +263,10 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                         from components.java
                     }
                 }
-            }
-            
-            oci {
-                publications {
-                    maven {
-                        from components.java
-                        repository = 'anonymous-test'
-                        tag = project.version
-                    }
-                }
                 
                 repositories {
-                    testRegistry {
-                        url = 'http://${registryUrl}'
+                    oci('testRegistry') {
+                        url = 'http://${registryUrl}/maven' // Include namespace in URL
                         insecure = true
                         // No credentials configured - should use anonymous access
                     }
@@ -344,20 +311,10 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                         from components.java
                     }
                 }
-            }
-            
-            oci {
-                publications {
-                    maven {
-                        from components.java
-                        repository = 'secure-anonymous-test'
-                        tag = project.version
-                    }
-                }
                 
                 repositories {
-                    testRegistry {
-                        url = 'http://${registryUrl}'
+                    oci('testRegistry') {
+                        url = 'http://${registryUrl}/maven' // Include namespace in URL
                         insecure = true
                         // No credentials configured - should use anonymous access
                     }
@@ -429,20 +386,10 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                         from components.java
                     }
                 }
-            }
-            
-            oci {
-                publications {
-                    maven {
-                        from components.java
-                        repository = 'multi-artifact-project'
-                        tag = project.version
-                    }
-                }
                 
                 repositories {
-                    testRegistry {
-                        url = 'http://${registryUrl}'
+                    oci('testRegistry') {
+                        url = 'http://${registryUrl}/maven' // Include namespace in URL
                         insecure = true
                     }
                 }
@@ -497,27 +444,18 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
             }
             
             // Standard Maven publishing configuration
+            // Maven publishing configuration
             publishing {
                 publications {
                     maven(MavenPublication) {
-                        from components.java    // Will have no artifacts due to disabled jar task
-                    }
-                }
-            }
-            
-            // OCI publishing configuration with unreachable registry
-            oci {
-                publications {
-                    maven {
-                        from components.java        // Mirror Maven publication (empty)
-                        repository = 'test-project' // Repository name
-                        tag = project.version       // Version tag
+                        from components.java        // Will have no artifacts due to disabled jar task
                     }
                 }
                 
                 repositories {
-                    nonExistentRegistry {
+                    oci('nonExistentRegistry') {
                         url = 'http://${registryUrl}' // Intentionally unreachable URL
+                        namespace = 'maven'
                         insecure = true               // Allow HTTP
                     }
                 }
@@ -562,29 +500,18 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                 mavenCentral()
             }
             
-            // Standard Maven publishing configuration
+            // Maven publishing with OCI registry
             publishing {
                 publications {
                     maven(MavenPublication) {
                         from components.java    // Include JAR and POM
                     }
                 }
-            }
-            
-            // OCI publishing configuration
-            oci {
-                publications {
-                    maven {
-                        from components.java           // Same artifacts as Maven
-                        repository = 'media-type-test' // Descriptive repository name
-                        tag = project.version          // Version-based tagging
-                    }
-                }
                 
                 repositories {
-                    testRegistry {
-                        url = 'http://${registryUrl}' // Test registry
-                        insecure = true               // Allow HTTP
+                    oci('testRegistry') {
+                        url = 'http://${registryUrl}/maven' // Test registry with namespace in URL
+                        insecure = true                     // Allow HTTP
                     }
                 }
             }

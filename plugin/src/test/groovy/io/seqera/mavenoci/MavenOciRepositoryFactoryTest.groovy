@@ -52,7 +52,6 @@ class MavenOciRepositoryFactoryTest extends Specification {
         MavenOciRepositoryFactory.createOciMavenRepository(spec, mavenRepo, project)
 
         then:
-        1 * mavenRepo.setName("testRepo")
         1 * mavenRepo.setUrl(_) >> { args ->
             def uri = args[0]
             assert uri.toString().contains(".gradle/oci-cache/testRepo")
@@ -69,7 +68,6 @@ class MavenOciRepositoryFactoryTest extends Specification {
         MavenOciRepositoryFactory.createOciMavenRepository(spec, mavenRepo, project)
 
         then:
-        1 * mavenRepo.setName("testRepo")
         1 * mavenRepo.setUrl(_)
         1 * mavenRepo.setAllowInsecureProtocol(true)
     }
@@ -99,7 +97,6 @@ class MavenOciRepositoryFactoryTest extends Specification {
         then:
         // Should still succeed since empty URL is handled
         noExceptionThrown()
-        1 * mavenRepo.setName("badRepo")
         1 * mavenRepo.setUrl(_)
     }
 
@@ -118,7 +115,6 @@ class MavenOciRepositoryFactoryTest extends Specification {
         then:
         Files.exists(tempDir.resolve(".gradle/oci-cache/repo1"))
         Files.exists(tempDir.resolve(".gradle/oci-cache/repo2"))
-        2 * mavenRepo.setName(_)
         2 * mavenRepo.setUrl(_)
     }
 }

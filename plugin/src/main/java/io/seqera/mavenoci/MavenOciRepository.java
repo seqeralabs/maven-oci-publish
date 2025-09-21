@@ -16,14 +16,14 @@
 
 package io.seqera.mavenoci;
 
+import javax.inject.Inject;
+
 import org.gradle.api.Action;
 import org.gradle.api.Named;
 import org.gradle.api.credentials.Credentials;
 import org.gradle.api.credentials.PasswordCredentials;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
-
-import javax.inject.Inject;
 
 /**
  * Configuration for an OCI registry repository used for publishing Maven artifacts.
@@ -67,7 +67,6 @@ import javax.inject.Inject;
  * <pre>registry.com/namespace/sanitized-groupId/artifactId:version</pre>
  * 
  * @see MavenOciPublication
- * @see MavenOciPublishingExtension
  * @since 1.0
  */
 public class MavenOciRepository implements Named {

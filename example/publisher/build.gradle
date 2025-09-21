@@ -13,7 +13,7 @@ def getRequiredProperty(String propertyName) {
 }
 
 group = 'io.seqera'
-version = '2.0.0'
+version = '2.2.0'
 
 repositories {
     mavenCentral()
@@ -27,7 +27,7 @@ java {
     withJavadocJar()
 }
 
-// Standard Maven publishing configuration
+// Maven publishing configuration with OCI registry support
 publishing {
     publications {
         maven(MavenPublication) {
@@ -56,20 +56,11 @@ publishing {
             }
         }
     }
-}
-
-// OCI publishing configuration for Docker Hub
-oci {
-    publications {
-        maven {
-            from components.java
-        }
-    }
     
     repositories {
-        docker {
-            url = 'https://public.cr.stage-seqera.io'
-            namespace = 'maven'
+        // OCI registry using the new direct syntax
+        oci('seqeraPublic') {
+            url = 'https://public.cr.stage-seqera.io/maven'
             credentials {
                 username = getRequiredProperty('ociRegistryUsername')
                 password = getRequiredProperty('ociRegistryPassword')

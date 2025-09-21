@@ -16,6 +16,9 @@
 
 package io.seqera.mavenoci;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import land.oras.Annotations;
 import land.oras.ArtifactType;
 import land.oras.ContainerRef;
@@ -34,9 +37,6 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.UntrackedTask;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Gradle task for publishing Maven artifacts to OCI registries using the ORAS protocol.
@@ -82,7 +82,6 @@ import java.util.stream.Collectors;
  * 
  * @see MavenOciPublication
  * @see MavenOciRepository
- * @see MavenOciPublishingExtension
  * @since 1.0
  */
 @UntrackedTask(because = "Not compatible with configuration cache due to Maven publication objects")

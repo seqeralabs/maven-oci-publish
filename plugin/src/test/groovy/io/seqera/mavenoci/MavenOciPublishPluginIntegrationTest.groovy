@@ -62,31 +62,17 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
                         from components.java
                     }
                 }
-            }
-            
-            oci {
-                publications {
-                    maven {
-                        from components.java
-                        repository = 'example.com/maven/test-project'
-                        tag = project.version
-                    }
-                    
-                    snapshot {
-                        from components.java
-                        repository = 'example.com/maven/test-project'
-                        tag = 'snapshot'
-                    }
-                }
                 
                 repositories {
-                    registry1 {
+                    oci('registry1') {
                         url = 'https://registry1.example.com'
+                        namespace = 'maven'
                         insecure = false
                     }
                     
-                    registry2 {
+                    oci('registry2') {
                         url = 'https://registry2.example.com'
+                        namespace = 'maven'
                         insecure = false
                     }
                 }
@@ -105,8 +91,6 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
         result.output.contains("publishToOciRegistries")
         result.output.contains("publishMavenPublicationToRegistry1Repository")
         result.output.contains("publishMavenPublicationToRegistry2Repository")
-        result.output.contains("publishSnapshotPublicationToRegistry1Repository")
-        result.output.contains("publishSnapshotPublicationToRegistry2Repository")
     }
     
     def "plugin integrates with maven-publish plugin"() {
@@ -135,20 +119,11 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
                         from components.java
                     }
                 }
-            }
-            
-            oci {
-                publications {
-                    maven {
-                        from components.java
-                        repository = 'example.com/maven/test-project'
-                        tag = project.version
-                    }
-                }
                 
                 repositories {
-                    example {
+                    oci('example') {
                         url = 'https://example.com'
+                        namespace = 'maven'
                     }
                 }
             }
@@ -179,9 +154,8 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
                 id 'io.seqera.maven-oci-publish'
             }
             
-            oci {
-                // Empty configuration
-            }
+            // Plugin now integrates with publishing.repositories
+            // No separate oci block needed
         """
 
         when:

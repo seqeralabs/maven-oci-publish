@@ -16,15 +16,15 @@
 
 package io.seqera.mavenoci;
 
-import org.gradle.api.Project;
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+
+import org.gradle.api.Project;
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 
 /**
  * Factory for creating Maven repositories that can resolve artifacts from OCI registries.
@@ -90,8 +90,8 @@ public class MavenOciRepositoryFactory {
             // Create cache directory for this OCI repository
             Path cacheDir = createCacheDirectory(spec, project);
             
-            // Configure repository to use cache directory as its URL
-            repository.setName(spec.getName());
+            // Configure repository to use cache directory as its URL  
+            // Name is already set by caller, don't change it here
             repository.setUrl(cacheDir.toUri());
             
             if (insecure) {

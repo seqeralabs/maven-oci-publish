@@ -9,9 +9,9 @@ This example demonstrates how to consume a Java library published to Docker Hub 
 - **Repository**: `pditommaso/maven`
 - **Challenge**: Standard Maven/Gradle don't natively support OCI registries
 
-## 🔧 Current Limitations
+## ✅ Current Capabilities
 
-Currently, standard Maven and Gradle repositories don't natively support OCI registries. This example shows the structure and demonstrates what consumption would look like once proper tooling is available.
+This example demonstrates the new direct `oci()` syntax for consuming libraries from OCI registries. The Maven OCI Publish Plugin now supports both **publishing** and **consuming** artifacts from OCI registries using standard Gradle dependency syntax.
 
 ## ⚠️ Important: Repository Must Exist
 

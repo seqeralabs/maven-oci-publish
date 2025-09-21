@@ -60,15 +60,22 @@ publishing {
     }
 }
 
-oci {
+publishing {
     publications {
-        maven {
+        maven(MavenPublication) {
             from components.java
         }
     }
     
     repositories {
-        myRegistry {
+        // Traditional Maven repository
+        maven {
+            name = 'central'
+            url = 'https://repo1.maven.org/maven2/'
+        }
+        
+        // OCI registry using the new direct syntax
+        oci('myRegistry') {
             url = 'https://registry.example.com'
             namespace = 'maven'
             credentials {
@@ -169,10 +176,12 @@ OCI registries often use namespaces to organize repositories. The plugin support
 
 2. **Explicit Namespace**: Configured separately (for publishing)
    ```gradle
-   repositories {
-       docker {
-           url = 'https://registry.com'
-           namespace = 'my-namespace'
+   publishing {
+       repositories {
+           oci('docker') {
+               url = 'https://registry.com'
+               namespace = 'my-namespace'
+           }
        }
    }
    ```
@@ -329,9 +338,9 @@ repositories {
 
 ### Custom Namespace
 ```gradle
-oci {
+publishing {
     repositories {
-        custom {
+        oci('custom') {
             url = 'https://registry.com'
             namespace = 'my-org/maven-artifacts'
         }
@@ -377,15 +386,15 @@ dependencies {
 ### Publisher Configuration
 
 ```gradle
-oci {
+publishing {
     publications {
-        maven {
+        maven(MavenPublication) {
             from components.java
         }
     }
     
     repositories {
-        dockerHub {
+        oci('dockerHub') {
             url = 'https://registry-1.docker.io'
             namespace = 'maven'
             credentials {

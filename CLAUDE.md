@@ -58,8 +58,8 @@ The plugin follows a standard Gradle plugin architecture with these key componen
 ### Plugin Flow
 
 #### Publishing Flow
-1. Plugin applies and creates `oci` DSL extension
-2. Users configure publications and repositories in `oci { ... }` block
+1. Plugin applies and creates direct `oci()` method in `publishing.repositories`
+2. Users configure repositories using `publishing { repositories { oci('name') { } } }` syntax
 3. After project evaluation, plugin creates publishing tasks for each publication-repository combination
 4. Tasks use ORAS Java SDK to push Maven artifacts to OCI registries with proper media types
 
@@ -146,18 +146,18 @@ dependencies {
 
 ### For Publishing Artifacts to OCI Registries
 
-Publishing uses the standard `oci` DSL block:
+Publishing uses the standard `publishing` DSL with direct `oci()` method:
 
 ```gradle
-oci {
+publishing {
     publications {
-        maven {
+        maven(MavenPublication) {
             from components.java
         }
     }
     
     repositories {
-        seqeraPublic {
+        oci('seqeraPublic') {
             url = 'https://seqera.io/oci-registry'
             credentials {
                 username = project.findProperty('oci.username')

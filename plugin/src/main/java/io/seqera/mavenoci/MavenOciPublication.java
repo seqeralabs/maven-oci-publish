@@ -16,6 +16,8 @@
 
 package io.seqera.mavenoci;
 
+import javax.inject.Inject;
+
 import org.gradle.api.Action;
 import org.gradle.api.Named;
 import org.gradle.api.artifacts.PublishArtifact;
@@ -23,8 +25,6 @@ import org.gradle.api.component.SoftwareComponent;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.SetProperty;
-
-import javax.inject.Inject;
 
 /**
  * Configuration for publishing Maven artifacts to OCI registries.
@@ -58,7 +58,6 @@ import javax.inject.Inject;
  * <p>The publication can include artifacts from Gradle's software components (typically {@code components.java})
  * which automatically includes the main JAR, sources, javadoc, and POM files.</p>
  * 
- * @see MavenOciPublishingExtension
  * @see MavenOciRepository
  * @since 1.0
  */

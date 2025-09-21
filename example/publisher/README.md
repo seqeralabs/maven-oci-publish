@@ -85,6 +85,31 @@ The plugin publishes:
 
 All artifacts are stored as OCI artifacts in Docker Hub.
 
+## 🔧 Configuration Syntax
+
+This example uses the new direct `oci()` syntax for configuring repositories:
+
+```gradle
+publishing {
+    repositories {
+        // OCI registry using the new direct syntax
+        oci('seqeraPublic') {
+            url = 'https://public.cr.stage-seqera.io'
+            namespace = 'maven'
+            credentials {
+                username = getRequiredProperty('ociRegistryUsername')
+                password = getRequiredProperty('ociRegistryPassword')
+            }
+        }
+    }
+}
+```
+
+This provides:
+- ✅ **Standard Gradle syntax** - no custom DSL required
+- ✅ **Seamless integration** - works alongside traditional `maven {}` repositories
+- ✅ **Full feature support** - credentials, namespaces, insecure connections
+
 ## 🛠️ Troubleshooting
 
 1. **Authentication Issues**

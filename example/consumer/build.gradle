@@ -27,7 +27,7 @@ application {
 
 dependencies {
     // Normal Maven dependency using OCI repository!
-    implementation 'io.seqera:shared-library:2.0.0'
+    implementation 'io.seqera:shared-library:2.2.0'
     // This automatically resolves to public.cr.stage-seqera.io/maven/io-seqera/shared-library:2.0.0
     
     implementation 'org.slf4j:slf4j-api:2.0.7'

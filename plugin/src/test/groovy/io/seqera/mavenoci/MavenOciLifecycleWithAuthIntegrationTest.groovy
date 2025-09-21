@@ -137,20 +137,11 @@ class MavenOciLifecycleWithAuthIntegrationTest extends Specification {
                         artifactId = 'real-auth-test'
                     }
                 }
-            }
-            
-            oci {
-                publications {
-                    maven {
-                        from components.java
-                        repository = 'maven/com.example/real-auth-test'
-                        tag = project.version
-                    }
-                }
                 
                 repositories {
-                    testRegistry {
+                    oci('testRegistry') {
                         url = 'http://${registryUrl}'
+                        namespace = 'maven'
                         insecure = true
                         // No authentication required - this demonstrates basic ORAS SDK functionality
                     }
