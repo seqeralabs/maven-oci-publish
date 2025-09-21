@@ -28,7 +28,39 @@ import javax.inject.Inject;
 
 /**
  * Configuration for publishing Maven artifacts to OCI registries.
- * Similar to MavenPublication but adapted for OCI storage.
+ * 
+ * <p>This class is similar to Gradle's {@code MavenPublication} but adapted for OCI storage.
+ * It defines what artifacts should be published to OCI registries and how they should be organized.</p>
+ * 
+ * <h3>Usage</h3>
+ * <p>Publications are configured within the {@code oci} DSL block:</p>
+ * <pre>{@code
+ * oci {
+ *     publications {
+ *         maven {
+ *             from components.java
+ *             repository = 'my-artifacts'
+ *             tag = project.version
+ *         }
+ *     }
+ * }
+ * }</pre>
+ * 
+ * <h3>Coordinate Mapping</h3>
+ * <p>Maven coordinates are automatically mapped to OCI references:</p>
+ * <ul>
+ *   <li>{@code groupId} → sanitized group ID (e.g., {@code com.example} → {@code com-example})</li>
+ *   <li>{@code artifactId} → repository name</li>
+ *   <li>{@code version} → OCI tag</li>
+ * </ul>
+ * 
+ * <h3>Software Components</h3>
+ * <p>The publication can include artifacts from Gradle's software components (typically {@code components.java})
+ * which automatically includes the main JAR, sources, javadoc, and POM files.</p>
+ * 
+ * @see MavenOciPublishingExtension
+ * @see MavenOciRepository
+ * @since 1.0
  */
 public class MavenOciPublication implements Named {
     

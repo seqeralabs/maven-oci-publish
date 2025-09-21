@@ -25,8 +25,46 @@ import javax.inject.Inject;
 import java.util.Optional;
 
 /**
- * Specification for an OCI repository that can be used as a Maven repository.
- * This defines the configuration for accessing OCI registries as artifact repositories.
+ * Specification for an OCI repository that can be used as a Maven dependency repository.
+ * 
+ * <p>This class defines the configuration for accessing OCI registries as artifact repositories
+ * for dependency resolution. It's used when configuring OCI repositories in the {@code repositories}
+ * block for consuming Maven artifacts from OCI registries.</p>
+ * 
+ * <h3>Usage</h3>
+ * <p>OCI repositories are configured using the {@code oci("name")} factory method:</p>
+ * <pre>{@code
+ * repositories {
+ *     mavenCentral()
+ *     
+ *     oci("myRegistry") {
+ *         url = 'https://registry.example.com/maven'
+ *         insecure = false
+ *         credentials {
+ *             username = 'user'
+ *             password = 'pass'
+ *         }
+ *     }
+ * }
+ * }</pre>
+ * 
+ * <h3>URL Structure</h3>
+ * <p>The URL can include a namespace path component which will be used to locate artifacts:</p>
+ * <ul>
+ *   <li>{@code https://registry.com} - Base registry</li>
+ *   <li>{@code https://registry.com/maven} - Registry with "maven" namespace</li>
+ *   <li>{@code https://registry.com/org/maven} - Registry with "org/maven" nested namespace</li>
+ * </ul>
+ * 
+ * <h3>Dependency Resolution</h3>
+ * <p>When Gradle resolves a dependency like {@code com.example:my-lib:1.0.0}, this repository
+ * will attempt to find the artifact at the OCI reference:</p>
+ * <pre>registry.com/[namespace/]com-example/my-lib:1.0.0</pre>
+ * 
+ * @see MavenOciRepositoryFactory
+ * @see MavenOciResolver
+ * @see MavenOciGroupSanitizer
+ * @since 1.0
  */
 public abstract class MavenOciRepositorySpec implements Named {
     

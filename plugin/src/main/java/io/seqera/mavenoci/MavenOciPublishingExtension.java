@@ -29,7 +29,50 @@ import javax.inject.Inject;
 
 /**
  * Main extension for OCI publishing and repository configuration.
- * Provides the 'mavenOci' DSL block for configuring OCI publication and repositories.
+ * 
+ * <p>This class provides the {@code oci} DSL block for configuring Maven artifact publishing
+ * to OCI registries. It manages both publications (what to publish) and repositories (where to publish).</p>
+ * 
+ * <h3>DSL Structure</h3>
+ * <p>The extension creates the following DSL structure in your build script:</p>
+ * <pre>{@code
+ * oci {
+ *     publications {
+ *         maven {
+ *             from components.java
+ *             repository = 'my-artifacts'
+ *         }
+ *     }
+ *     
+ *     repositories {
+ *         dockerHub {
+ *             url = 'https://registry-1.docker.io'
+ *             namespace = 'maven'
+ *             credentials {
+ *                 username = 'user'
+ *                 password = 'pass'
+ *             }
+ *         }
+ *     }
+ * }
+ * }</pre>
+ * 
+ * <h3>Task Generation</h3>
+ * <p>The extension automatically generates Gradle publishing tasks for each publication-repository 
+ * combination. For example, a publication named "maven" and repository named "dockerHub" creates:</p>
+ * <ul>
+ *   <li>{@code publishMavenPublicationToDockerHubRepository}</li>
+ *   <li>{@code publishToOciRegistries} (lifecycle task)</li>
+ * </ul>
+ * 
+ * <h3>Integration</h3>
+ * <p>This extension also provides OCI repository support for dependency resolution by registering
+ * the {@code oci("name")} factory method in the {@code repositories} block.</p>
+ * 
+ * @see MavenOciPublication
+ * @see MavenOciRepository
+ * @see MavenOciPublishPlugin
+ * @since 1.0
  */
 public class MavenOciPublishingExtension {
     

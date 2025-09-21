@@ -19,6 +19,48 @@ package io.seqera.mavenoci;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+/**
+ * Utility class for parsing OCI registry URIs and extracting registry host and namespace information.
+ * 
+ * <p>This parser handles the decomposition of OCI registry URLs into their constituent parts,
+ * separating the registry host from the namespace path. This is crucial for proper OCI reference
+ * construction when publishing or resolving Maven artifacts.</p>
+ * 
+ * <h3>URI Structure</h3>
+ * <p>OCI registry URIs follow this general structure:</p>
+ * <pre>
+ * [scheme://]host[:port][/namespace[/sub-namespace[...]]]
+ * </pre>
+ * 
+ * <h3>Parsing Examples</h3>
+ * <ul>
+ *   <li>{@code https://registry-1.docker.io} → host: {@code registry-1.docker.io}, namespace: {@code ""}</li>
+ *   <li>{@code https://registry.com:5000/maven} → host: {@code registry.com:5000}, namespace: {@code "maven"}</li>
+ *   <li>{@code http://localhost:5000/org/maven} → host: {@code localhost:5000}, namespace: {@code "org/maven"}</li>
+ *   <li>{@code ghcr.io/myorg/maven} → host: {@code ghcr.io}, namespace: {@code "myorg/maven"}</li>
+ * </ul>
+ * 
+ * <h3>Usage in OCI References</h3>
+ * <p>The parsed components are used to construct OCI references for Maven artifacts:</p>
+ * <pre>
+ * Registry Host: registry.com:5000
+ * Namespace: maven/snapshots
+ * Maven Artifact: com.example:my-lib:1.0.0
+ * Final OCI Ref: registry.com:5000/maven/snapshots/com-example/my-lib:1.0.0
+ * </pre>
+ * 
+ * <h3>Error Handling</h3>
+ * <p>The parser validates URI format and throws {@link IllegalArgumentException} for:</p>
+ * <ul>
+ *   <li>Null or empty URIs</li>
+ *   <li>Malformed URIs that cannot be parsed</li>
+ *   <li>URIs without a valid host component</li>
+ * </ul>
+ * 
+ * @see MavenOciResolver
+ * @see MavenOciRepositoryFactory
+ * @since 1.0
+ */
 public class MavenOciRegistryUriParser {
     
     public static OciRegistryInfo parse(String uri) {

@@ -409,7 +409,7 @@ oci {
 ## Known Limitations
 
 - **Authentication**: Currently supports username/password only (no OAuth, tokens, or Docker credential helpers)
-- **Registry Compatibility**: Tested with Docker Hub, GitHub Container Registry, and generic OCI registries
+- **Repository Creation**: Requires container registries that allow creating arbitrary nested repositories on-demand (not all registries support this)
 - **Metadata**: POM files may be generated if not included in OCI artifacts
 - **Transitive Dependencies**: Only direct artifacts are cached; transitive dependency metadata relies on generated POMs
 - **Parallel Downloads**: OCI resolution is sequential (no parallel downloads)

@@ -26,8 +26,49 @@ import org.gradle.api.provider.Property;
 import javax.inject.Inject;
 
 /**
- * Configuration for an OCI registry repository.
- * Handles authentication and connection details for OCI-compliant registries.
+ * Configuration for an OCI registry repository used for publishing Maven artifacts.
+ * 
+ * <p>This class handles authentication and connection details for OCI-compliant registries
+ * such as Docker Hub, GitHub Container Registry, AWS ECR, and others. It defines where
+ * artifacts should be published within the {@code oci} DSL block.</p>
+ * 
+ * <h3>Usage</h3>
+ * <p>Repositories are configured within the {@code oci} DSL block:</p>
+ * <pre>{@code
+ * oci {
+ *     repositories {
+ *         dockerHub {
+ *             url = 'https://registry-1.docker.io'
+ *             namespace = 'maven'
+ *             credentials {
+ *                 username = 'myuser'
+ *                 password = 'mypass'
+ *             }
+ *         }
+ *         
+ *         localDev {
+ *             url = 'http://localhost:5000'
+ *             insecure = true
+ *         }
+ *     }
+ * }
+ * }</pre>
+ * 
+ * <h3>Configuration Options</h3>
+ * <ul>
+ *   <li>{@code url} - OCI registry URL (required)</li>
+ *   <li>{@code namespace} - Optional namespace/organization within the registry</li>
+ *   <li>{@code insecure} - Allow HTTP connections (default: false)</li>
+ *   <li>{@code credentials} - Username/password authentication</li>
+ * </ul>
+ * 
+ * <h3>Namespace Behavior</h3>
+ * <p>When a namespace is specified, the final OCI reference becomes:</p>
+ * <pre>registry.com/namespace/sanitized-groupId/artifactId:version</pre>
+ * 
+ * @see MavenOciPublication
+ * @see MavenOciPublishingExtension
+ * @since 1.0
  */
 public class MavenOciRepository implements Named {
     
