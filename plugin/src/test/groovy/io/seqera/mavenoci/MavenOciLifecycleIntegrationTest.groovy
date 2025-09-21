@@ -87,7 +87,6 @@ class MavenOciLifecycleIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'                           // Provides Java compilation and JAR creation
-                id 'maven-publish'                  // Gradle's standard Maven publishing support
                 id 'io.seqera.maven-oci-publish'   // Our custom OCI publishing plugin
             }
             

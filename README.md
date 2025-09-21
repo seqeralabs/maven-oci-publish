@@ -22,8 +22,7 @@ A Gradle plugin that enables **bidirectional** Maven artifact management with OC
 ```gradle
 plugins {
     id 'java'
-    id 'maven-publish'  // Required for publishing
-    id 'io.seqera.maven-oci-publish' version 'x.x.x'
+    id 'io.seqera.maven-oci-publish' version 'x.x.x'  // Automatically applies maven-publish
 }
 ```
 
@@ -77,7 +76,6 @@ publishing {
         // OCI registry using the new direct syntax
         oci('myRegistry') {
             url = 'https://registry.example.com'
-            namespace = 'maven'
             credentials {
                 username = 'user'
                 password = 'pass'
@@ -164,28 +162,33 @@ Maven group IDs often contain characters that are not valid in OCI repository na
 
 ### Namespace Support
 
-OCI registries often use namespaces to organize repositories. The plugin supports namespaces in two ways:
+OCI registries often use namespaces to organize repositories. The plugin supports multiple namespace levels embedded in the registry URL:
 
-1. **URL Path Namespace**: Embedded in the registry URL
-   ```gradle
-   oci("myRegistry") {
-       url = 'https://registry.com/my-namespace'
-   }
-   ```
-   Result: `registry.com/my-namespace/sanitized-group/artifact:version`
+**URL Path Namespace**: Supports unlimited nested namespace levels
+```gradle
+oci("myRegistry") {
+    url = 'https://registry.com/org/team/maven'
+}
+```
+Result: `registry.com/org/team/maven/sanitized-group/artifact:version`
 
-2. **Explicit Namespace**: Configured separately (for publishing)
-   ```gradle
-   publishing {
-       repositories {
-           oci('docker') {
-               url = 'https://registry.com'
-               namespace = 'my-namespace'
-           }
-       }
-   }
-   ```
-   Result: `registry.com/my-namespace/sanitized-group/artifact:version`
+**Examples of supported namespace patterns:**
+- `https://registry.com` → No namespace (root level)
+- `https://registry.com/maven` → Single namespace level  
+- `https://registry.com/org/maven/snapshots` → Multiple namespace levels
+- `https://ghcr.io/myorg/maven` → GitHub Container Registry with namespace
+
+For publishing, you can also configure namespace separately:
+```gradle
+publishing {
+    repositories {
+        oci('docker') {
+            url = 'https://registry.com'
+            namespace = 'org/team/maven'
+        }
+    }
+}
+```
 
 ## Resolution Process
 

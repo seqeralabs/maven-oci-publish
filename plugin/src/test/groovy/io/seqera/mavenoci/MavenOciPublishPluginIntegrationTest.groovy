@@ -45,7 +45,6 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'maven-publish'
                 id 'io.seqera.maven-oci-publish'
             }
             
@@ -102,7 +101,6 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'maven-publish'
                 id 'io.seqera.maven-oci-publish'
             }
             
@@ -150,7 +148,6 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'maven-publish'
                 id 'io.seqera.maven-oci-publish'
             }
             

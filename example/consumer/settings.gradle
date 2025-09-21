@@ -1,4 +1,6 @@
 // Include the plugin project as a composite build
-includeBuild('../../')
+ pluginManagement {
+     includeBuild('../../')
+ }
 
 rootProject.name = 'oci-consumer-example'

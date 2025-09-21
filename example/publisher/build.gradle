@@ -1,15 +1,20 @@
 plugins {
     id 'java'
-    id 'maven-publish'
     id 'io.seqera.maven-oci-publish'
 }
 
 def getRequiredProperty(String propertyName) {
     def value = project.findProperty(propertyName)
-    if (value == null || value.toString().trim().isEmpty()) {
-        throw new GradleException("Required property '${propertyName}' is missing. Please set it in gradle.properties or via -P${propertyName}=value")
+    if (value != null && !value.toString().trim().isEmpty()) {
+        return value
     }
-    return value
+    // Fallback to environment variable: convert camelCase to SNAKE_CASE
+    def envVarName = propertyName.replaceAll(/([A-Z])/, /_$1/).toUpperCase()
+    value = System.getenv(envVarName)
+    if (value != null && !value.toString().trim().isEmpty()) {
+        return value
+    }
+    throw new GradleException("Required property '${propertyName}' is missing. Please set it in gradle.properties, via -P${propertyName}=value, or as environment variable ${envVarName}")
 }
 
 group = 'io.seqera'

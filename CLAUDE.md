@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Gradle plugin that enables **bidirectional** Maven artifact management with OCI-compliant registries using the ORAS (OCI Registry as Storage) Java SDK. The plugin provides both:
 
-1. **Publishing**: A DSL similar to Gradle's maven-publish plugin for publishing Maven artifacts to OCI registries
+1. **Publishing**: A DSL similar to Gradle's `maven-publish` plugin for publishing Maven artifacts to OCI registries
 2. **Dependency Resolution**: Transparent consumption of Maven artifacts from OCI registries using standard Gradle dependency syntax
 
 The plugin seamlessly integrates with Gradle's existing repository and dependency system, allowing OCI registries to be used alongside traditional Maven repositories.
@@ -122,7 +122,7 @@ This convention ensures:
 
 ### For Consuming Artifacts from OCI Registries
 
-To consume artifacts from OCI registries, configure OCI repositories using the named factory method within the `repositories` block:
+To consume artifacts from OCI registries, configure OCI repositories using the named factory method within the `repositories` block. The plugin supports multiple namespace levels embedded directly in the URL:
 
 ```gradle
 repositories {
@@ -133,8 +133,13 @@ repositories {
         url = 'https://seqera.io/oci-registry'
     }
     
+    // Multi-level namespace support
+    oci("nestedNamespace") {
+        url = 'https://registry.com/org/team/maven'
+    }
+    
     oci("localRegistry") {
-        url = 'http://localhost:5000'
+        url = 'http://localhost:5000/maven'
         insecure = true
     }
 }
@@ -146,7 +151,7 @@ dependencies {
 
 ### For Publishing Artifacts to OCI Registries
 
-Publishing uses the standard `publishing` DSL with direct `oci()` method:
+Publishing uses the standard `publishing` DSL with direct `oci()` method. Supports both URL-embedded namespaces and separate namespace configuration:
 
 ```gradle
 publishing {
@@ -157,11 +162,22 @@ publishing {
     }
     
     repositories {
+        // URL-embedded namespace approach
         oci('seqeraPublic') {
-            url = 'https://seqera.io/oci-registry'
+            url = 'https://seqera.io/oci-registry/org/maven'
             credentials {
                 username = project.findProperty('oci.username')
                 password = project.findProperty('oci.password')
+            }
+        }
+        
+        // Separate namespace configuration approach  
+        oci('dockerRegistry') {
+            url = 'https://registry.com'
+            namespace = 'org/team/maven'
+            credentials {
+                username = project.findProperty('docker.username')
+                password = project.findProperty('docker.password')
             }
         }
     }

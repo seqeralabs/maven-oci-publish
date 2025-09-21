@@ -27,7 +27,12 @@ plugins {
 
     // Apply the Groovy plugin to add support for Groovy (for tests only)
     id 'groovy'
+    
+    // Plugin publishing
+    id 'com.gradle.plugin-publish' version '1.2.1'
 }
+
+version = file('../VERSION').text.trim()
 
 repositories {
     // Use Maven Central for resolving dependencies.
@@ -57,11 +62,17 @@ dependencies {
 }
 
 gradlePlugin {
+    website = 'https://github.com/pditommaso/maven-oci-publish'
+    vcsUrl = 'https://github.com/pditommaso/maven-oci-publish'
+    
     // Define the plugin
     plugins {
         mavenOciPublish {
             id = 'io.seqera.maven-oci-publish'
             implementationClass = 'io.seqera.mavenoci.MavenOciPublishPlugin'
+            displayName = 'Maven OCI Publish Plugin'
+            description = 'A Gradle plugin for bidirectional Maven artifact management with OCI-compliant registries'
+            tags = ['maven', 'oci', 'registry', 'docker', 'publishing']
         }
     }
 }

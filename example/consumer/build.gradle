@@ -39,35 +39,3 @@ test {
     useJUnitPlatform()
 }
 
-// Custom task to show how to consume OCI artifacts
-tasks.register('showConsumptionInfo') {
-    doLast {
-        println "\n📦 Enhanced OCI Artifact Consumption:"
-        println "   Registry: https://public.cr.stage-seqera.io"
-        println "   Namespace: maven"
-        println "   Maven Coordinates: io.seqera:shared-library:2.0.0"
-        println "   OCI Reference: public.cr.stage-seqera.io/maven/io-seqera/shared-library:2.0.0"
-        
-        println "\n✅ Current: Normal Maven Dependency using new oci() syntax!"
-        println "   repositories {"
-        println "       mavenCentral()"
-        println "       "
-        println "       oci(\"seqeraPublic\") {"
-        println "           url = 'https://public.cr.stage-seqera.io/maven'"
-        println "           // namespace embedded in URL for consumers"
-        println "       }"
-        println "   }"
-        println "   dependencies {"
-        println "       implementation 'io.seqera:shared-library:2.0.0'"
-        println "   }"
-        
-        println "\n🔧 Enhanced Coordinate System Features:"
-        println "   ✅ Predictable Maven → OCI mapping"
-        println "   ✅ Hierarchical organization (group/artifact structure)"
-        println "   ✅ Docker-compatible naming (dots → hyphens)"
-        println "   ✅ Namespace isolation"
-        println "   ✅ Anonymous access support"
-        println "   ✅ Native Gradle dependency resolution"
-    }
-}
-

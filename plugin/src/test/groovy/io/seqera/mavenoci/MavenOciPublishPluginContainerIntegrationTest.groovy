@@ -140,7 +140,6 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'                           // Enable Java compilation and packaging
-                id 'maven-publish'                  // Standard Gradle Maven publishing support
                 id 'io.seqera.maven-oci-publish'   // Our OCI publishing plugin
             }
             
@@ -195,7 +194,6 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'maven-publish'
                 id 'io.seqera.maven-oci-publish'
             }
             
@@ -246,7 +244,6 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'maven-publish'
                 id 'io.seqera.maven-oci-publish'
             }
             
@@ -294,7 +291,6 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'maven-publish'
                 id 'io.seqera.maven-oci-publish'
             }
             
@@ -360,7 +356,6 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'maven-publish'
                 id 'io.seqera.maven-oci-publish'
             }
             
@@ -426,8 +421,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'                           // Java plugin for compilation
-                id 'maven-publish'                  // Maven publishing support
-                id 'io.seqera.maven-oci-publish'   // OCI publishing plugin
+                id 'io.seqera.maven-oci-publish'    // OCI publishing plugin
             }
             
             group = 'com.example'
