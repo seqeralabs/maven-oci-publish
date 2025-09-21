@@ -566,6 +566,9 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                 task.getNamespace().set(repository.getNamespace());
             }
             
+            // Configure overwrite policy
+            task.getOverwritePolicy().set(repository.getOverwritePolicy());
+            
             // Configure Maven coordinates
             task.getGroupId().set(publication.getGroupId());
             task.getArtifactId().set(publication.getArtifactId());

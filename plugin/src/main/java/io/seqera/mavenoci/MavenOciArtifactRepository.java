@@ -40,6 +40,7 @@ public class MavenOciArtifactRepository implements MavenArtifactRepository {
     private final Property<String> url;
     private final Property<String> namespace;
     private final Property<Boolean> insecure;
+    private final Property<OverwritePolicy> overwritePolicy;
     private final PasswordCredentials credentials;
     private final AuthenticationContainer authenticationContainer;
     
@@ -50,6 +51,8 @@ public class MavenOciArtifactRepository implements MavenArtifactRepository {
         this.namespace = objectFactory.property(String.class);
         this.insecure = objectFactory.property(Boolean.class);
         this.insecure.set(false); // Default to secure
+        this.overwritePolicy = objectFactory.property(OverwritePolicy.class);
+        this.overwritePolicy.set(OverwritePolicy.FAIL); // Default to fail
         this.credentials = objectFactory.newInstance(PasswordCredentials.class);
         // Create a simple empty authentication container for interface compliance
         this.authenticationContainer = null; // We'll handle authentication through credentials
@@ -167,6 +170,9 @@ public class MavenOciArtifactRepository implements MavenArtifactRepository {
     public void setNamespace(String namespace) { this.namespace.set(namespace); }
     public Property<Boolean> getInsecure() { return insecure; }
     public void setInsecure(Boolean insecure) { this.insecure.set(insecure); }
+    public Property<OverwritePolicy> getOverwritePolicy() { return overwritePolicy; }
+    public void setOverwritePolicy(String policy) { this.overwritePolicy.set(OverwritePolicy.fromString(policy)); }
+    public void setOverwritePolicy(OverwritePolicy policy) { this.overwritePolicy.set(policy); }
     
     public PasswordCredentials getCredentials() { 
         return credentials;

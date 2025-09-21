@@ -135,6 +135,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         given: "a Gradle project configured with Maven OCI publishing"
         // Get the dynamically assigned port from the Testcontainers registry
         def registryUrl = "localhost:${registry.getMappedPort(5000)}"
+        def uniqueVersion = "1.0.0-test1-${System.currentTimeMillis()}"
         
         // Configure a complete Gradle project with Maven OCI publishing
         buildFile << """
@@ -145,7 +146,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
             
             // Standard Maven coordinates for the published artifact
             group = 'com.example'
-            version = '1.0.0'
+            version = '${uniqueVersion}'
             
             // Repository for build dependencies (if any)
             repositories {
@@ -190,6 +191,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
     def "can publish to registry with authentication"() {
         given:
         def registryUrl = "localhost:${registry.getMappedPort(5000)}"
+        def uniqueVersion = "1.0.0-test2-${System.currentTimeMillis()}"
         
         buildFile << """
             plugins {
@@ -198,7 +200,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
             }
             
             group = 'com.example'
-            version = '1.0.0'
+            version = '${uniqueVersion}'
             
             repositories {
                 mavenCentral()
@@ -240,6 +242,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
     def "can publish with anonymous access (no credentials)"() {
         given:
         def registryUrl = "localhost:${registry.getMappedPort(5000)}"
+        def uniqueVersion = "1.0.0-test3-${System.currentTimeMillis()}"
         
         buildFile << """
             plugins {
@@ -248,7 +251,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
             }
             
             group = 'com.example'
-            version = '1.0.0'
+            version = '${uniqueVersion}'
             
             repositories {
                 mavenCentral()
@@ -287,6 +290,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
     def "can publish with insecure anonymous access"() {
         given:
         def registryUrl = "localhost:${registry.getMappedPort(5000)}"
+        def uniqueVersion = "1.0.0-test4-${System.currentTimeMillis()}"
         
         buildFile << """
             plugins {
@@ -295,7 +299,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
             }
             
             group = 'com.example'
-            version = '1.0.0'
+            version = '${uniqueVersion}'
             
             repositories {
                 mavenCentral()
@@ -334,6 +338,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
     def "can publish multiple artifacts and verify registry contents"() {
         given:
         def registryUrl = "localhost:${registry.getMappedPort(5000)}"
+        def uniqueVersion = "1.0.0-test5-${System.currentTimeMillis()}"
         
         // Create additional source files
         def testSrcDir = new File(projectDir, "src/test/java/com/example")
@@ -360,7 +365,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
             }
             
             group = 'com.example'
-            version = '1.0.0'
+            version = '${uniqueVersion}'
             
             repositories {
                 mavenCentral()
@@ -478,6 +483,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         given: "a project configured to validate OCI media type handling"
         // This test ensures that different artifact types get proper MIME types in OCI
         def registryUrl = "localhost:${registry.getMappedPort(5000)}"
+        def uniqueVersion = "1.0.0-test6-${System.currentTimeMillis()}"
         
         // Configure project for media type validation
         buildFile << """
@@ -488,7 +494,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
             }
             
             group = 'com.example'
-            version = '1.0.0'
+            version = '${uniqueVersion}'
             
             repositories {
                 mavenCentral()

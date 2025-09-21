@@ -60,6 +60,7 @@ import org.gradle.api.provider.Property;
  *   <li>{@code namespace} - Optional namespace/organization within the registry</li>
  *   <li>{@code insecure} - Allow HTTP connections (default: false)</li>
  *   <li>{@code credentials} - Username/password authentication</li>
+ *   <li>{@code overwritePolicy} - Policy for handling existing packages (default: fail)</li>
  * </ul>
  * 
  * <h3>Namespace Behavior</h3>
@@ -76,6 +77,7 @@ public class MavenOciRepository implements Named {
     private final Property<String> namespace;
     private final Property<Boolean> insecure;
     private final Property<Credentials> credentials;
+    private final Property<OverwritePolicy> overwritePolicy;
     private final ObjectFactory objectFactory;
     
     @Inject
@@ -87,6 +89,8 @@ public class MavenOciRepository implements Named {
         this.insecure = objectFactory.property(Boolean.class);
         this.insecure.set(false); // Default to secure
         this.credentials = objectFactory.property(Credentials.class);
+        this.overwritePolicy = objectFactory.property(OverwritePolicy.class);
+        this.overwritePolicy.set(OverwritePolicy.FAIL); // Default to fail
     }
     
     @Override
@@ -143,6 +147,18 @@ public class MavenOciRepository implements Named {
     
     public Property<Credentials> getCredentials() { 
         return credentials; 
+    }
+    
+    public Property<OverwritePolicy> getOverwritePolicy() {
+        return overwritePolicy;
+    }
+    
+    public void setOverwritePolicy(String policy) {
+        this.overwritePolicy.set(OverwritePolicy.fromString(policy));
+    }
+    
+    public void setOverwritePolicy(OverwritePolicy policy) {
+        this.overwritePolicy.set(policy);
     }
     
     /**

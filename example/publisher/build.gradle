@@ -66,6 +66,7 @@ publishing {
         // OCI registry using the new direct syntax
         oci('seqeraPublic') {
             url = 'https://public.cr.stage-seqera.io/maven'
+            overwritePolicy = 'override'
             credentials {
                 username = getRequiredProperty('ociRegistryUsername')
                 password = getRequiredProperty('ociRegistryPassword')

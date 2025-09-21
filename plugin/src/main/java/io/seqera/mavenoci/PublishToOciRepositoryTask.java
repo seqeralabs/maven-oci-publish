@@ -140,6 +140,9 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
     @Optional
     public abstract Property<String> getExecutionId();
     
+    @Input
+    public abstract Property<OverwritePolicy> getOverwritePolicy();
+    
     public PublishToOciRepositoryTask() {
         setDescription("Publishes Maven artifacts to an OCI registry");
         setGroup("publishing");
@@ -147,6 +150,7 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
         // Set defaults
         getInsecure().convention(false);
         getExecutionId().convention("default-execution");
+        getOverwritePolicy().convention(OverwritePolicy.FAIL);
     }
     
     @TaskAction
@@ -217,6 +221,18 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
                        getArtifactId().getOrElse("unknown"), getVersion().getOrElse("unknown"));
             logger.info("ContainerRef parsed - registry: {}, repository: {}, tag: {}", 
                        ref.getRegistry(), ref.getRepository(), ref.getTag());
+            
+            // Check overwrite policy before pushing
+            OverwritePolicy policy = getOverwritePolicy().getOrElse(OverwritePolicy.FAIL);
+            logger.info("Using overwrite policy: {} ({})", policy, policy.getDescription());
+            
+            if (policy != OverwritePolicy.OVERRIDE) {
+                boolean packageExists = checkPackageExists(registry, ref);
+                if (packageExists) {
+                    handleExistingPackage(policy, containerRef);
+                    return;
+                }
+            }
             
             // Push artifacts to registry using varargs
             Manifest manifest = registry.pushArtifact(
@@ -376,6 +392,60 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
         } catch (Exception e) {
             logger.warn("Failed to extract registry host from URL: {}, using original URL", registryUrl);
             return registryUrl;
+        }
+    }
+    
+    /**
+     * Checks if a package already exists in the OCI registry.
+     * 
+     * @param registry the OCI registry client
+     * @param ref the container reference to check
+     * @return true if the package exists, false otherwise
+     */
+    private boolean checkPackageExists(Registry registry, ContainerRef ref) {
+        try {
+            logger.debug("Checking if package exists: {}", ref);
+            // Attempt to get the manifest - if it exists, the package exists
+            Manifest existingManifest = registry.getManifest(ref);
+            logger.debug("Package exists with manifest: {}", existingManifest.getSchemaVersion());
+            return true;
+        } catch (Exception e) {
+            // If we get any exception (404, 401, etc.), assume package doesn't exist
+            logger.debug("Package does not exist or is not accessible: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Handles the case when a package already exists according to the configured policy.
+     * 
+     * @param policy the overwrite policy to apply
+     * @param containerRef the OCI reference that exists
+     */
+    private void handleExistingPackage(OverwritePolicy policy, String containerRef) {
+        switch (policy) {
+            case FAIL:
+                String errorMsg = String.format(
+                    "Package already exists in registry: %s. " +
+                    "Use overwritePolicy = 'override' to replace it, " +
+                    "or overwritePolicy = 'skip' to skip publishing.",
+                    containerRef
+                );
+                logger.error(errorMsg);
+                throw new GradleException(errorMsg);
+                
+            case SKIP:
+                logger.lifecycle("Package already exists, skipping publication: {}", containerRef);
+                logger.info("Task completed successfully (package skipped due to overwrite policy)");
+                break;
+                
+            case OVERRIDE:
+                // This case should never be reached since we skip the check for OVERRIDE policy
+                logger.warn("Package already exists, but will be overridden: {}", containerRef);
+                break;
+                
+            default:
+                throw new IllegalStateException("Unexpected overwrite policy: " + policy);
         }
     }
 }

@@ -90,6 +90,65 @@ Then publish:
 ./gradlew publishToOciRegistries
 ```
 
+## Overwrite Policy Configuration
+
+The plugin provides an `overwritePolicy` option to control behavior when publishing artifacts that already exist in the registry.
+
+### Available Policies
+
+- **`fail`** (default): Fails the build if the package already exists
+- **`override`**: Replaces the existing package with the new version  
+- **`skip`**: Skips publishing if the package already exists (build continues successfully)
+
+### Configuration
+
+```gradle
+publishing {
+    repositories {
+        oci('myRegistry') {
+            url = 'https://registry.example.com'
+            overwritePolicy = 'skip'  // fail | override | skip
+            credentials {
+                username = 'user'
+                password = 'pass'
+            }
+        }
+    }
+}
+```
+
+### Policy Behaviors
+
+#### Fail Policy (Default)
+```gradle
+oci('registry') {
+    overwritePolicy = 'fail'  // or omit for default
+}
+```
+- **Behavior**: Build fails with clear error message if package exists
+- **Use case**: Prevent accidental overwrites in production
+- **Output**: `Package already exists in registry: registry.com/namespace/artifact:version. Use overwritePolicy = 'override' to replace it, or overwritePolicy = 'skip' to skip publishing.`
+
+#### Override Policy
+```gradle
+oci('registry') {
+    overwritePolicy = 'override'
+}
+```
+- **Behavior**: Replaces existing packages without checking
+- **Use case**: Continuous deployment where artifacts should be updated
+- **Output**: Package is replaced with new version
+
+#### Skip Policy
+```gradle
+oci('registry') {
+    overwritePolicy = 'skip'
+}
+```
+- **Behavior**: Skips publishing if package exists, build continues successfully
+- **Use case**: Safe republishing scenarios where duplicates should be ignored
+- **Output**: `Package already exists, skipping publication: registry.com/namespace/artifact:version`
+
 ## Maven ↔ OCI Coordinate Mapping and Resolution
 
 The Maven OCI Publish Plugin enables storing and retrieving Maven artifacts in OCI (Open Container Initiative) registries using the ORAS (OCI Registry as Storage) protocol. This requires a systematic mapping between Maven's coordinate system and OCI's naming conventions.
