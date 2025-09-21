@@ -18,7 +18,6 @@ package io.seqera.mavenoci;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.component.SoftwareComponent;
 import org.gradle.api.credentials.PasswordCredentials;
 import org.gradle.api.logging.Logger;
@@ -31,7 +30,79 @@ import org.gradle.util.GradleVersion;
 import java.util.stream.Collectors;
 
 /**
- * A Gradle plugin for publishing and consuming Maven artifacts to/from OCI registries
+ * A Gradle plugin for publishing and consuming Maven artifacts to/from OCI registries.
+ * 
+ * <p>This plugin extends Gradle's standard Maven publishing capabilities to support OCI (Open Container Initiative)
+ * registries as both publishing destinations and dependency sources. It uses the ORAS (OCI Registry as Storage)
+ * protocol to store Maven artifacts as OCI artifacts.</p>
+ * 
+ * <h3>Features</h3>
+ * <ul>
+ *   <li><strong>Bidirectional Support</strong>: Both publish to and consume from OCI registries</li>
+ *   <li><strong>Standard Gradle Integration</strong>: Works with existing {@code dependencies} and {@code repositories} blocks</li>
+ *   <li><strong>Transparent Resolution</strong>: OCI repositories work alongside traditional Maven repositories</li>
+ *   <li><strong>Coordinate Mapping</strong>: Intelligent mapping between Maven coordinates and OCI references</li>
+ *   <li><strong>Caching</strong>: Local caching for performance and offline access</li>
+ *   <li><strong>Authentication</strong>: Support for registry authentication</li>
+ * </ul>
+ * 
+ * <h3>Publishing Configuration</h3>
+ * <p>Configure OCI publishing using the {@code oci} extension:</p>
+ * <pre>{@code
+ * oci {
+ *     publications {
+ *         maven {
+ *             from components.java
+ *         }
+ *     }
+ *     
+ *     repositories {
+ *         docker {
+ *             url = 'https://registry.example.com'
+ *             namespace = 'maven'
+ *             credentials {
+ *                 username = "user"
+ *                 password = "pass"
+ *             }
+ *         }
+ *     }
+ * }
+ * }</pre>
+ * 
+ * <h3>Consumption Configuration</h3>
+ * <p>Configure OCI repositories for dependency resolution:</p>
+ * <pre>{@code
+ * repositories {
+ *     mavenCentral()
+ *     
+ *     oci("myRegistry") {
+ *         url = 'https://registry.example.com/maven'
+ *         insecure = false
+ *     }
+ * }
+ * 
+ * dependencies {
+ *     implementation 'com.example:my-library:1.0.0'  // Resolves from OCI if available
+ * }
+ * }</pre>
+ * 
+ * <h3>Plugin Tasks</h3>
+ * <p>The plugin creates the following tasks:</p>
+ * <ul>
+ *   <li>{@code publishToOciRegistries} - Publishes all publications to all OCI repositories</li>
+ *   <li>{@code publish<Publication>To<Repository>Repository} - Publishes specific publication to specific repository</li>
+ * </ul>
+ * 
+ * <h3>Requirements</h3>
+ * <ul>
+ *   <li>Gradle 6.0 or later</li>
+ *   <li>Java 17 or later</li>
+ *   <li>Network access to OCI registries</li>
+ * </ul>
+ * 
+ * @see MavenOciPublishingExtension
+ * @see MavenOciRepositoryFactory
+ * @since 1.0
  */
 public class MavenOciPublishPlugin implements Plugin<Project> {
     
@@ -47,7 +118,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             throw new IllegalStateException("This plugin requires Gradle 6.0 or later");
         }
         
-        logger.info("Applying Maven OCI plugin to project: {}", project.getName());
+        logger.debug("Applying Maven OCI plugin to project: {}", project.getName());
         
         // Create the publishing extension
         MavenOciPublishingExtension extension = project.getExtensions().create(
@@ -84,7 +155,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
         );
     }
     
-    private void createPublishTask(Project project, OciPublication publication, OciRepository repository) {
+    private void createPublishTask(Project project, MavenOciPublication publication, MavenOciRepository repository) {
         String taskName = "publish" + capitalize(publication.getName()) + "PublicationTo" + capitalize(repository.getName()) + "Repository";
         
         TaskProvider<PublishToOciRepositoryTask> publishTask = project.getTasks().register(taskName, PublishToOciRepositoryTask.class, task -> {

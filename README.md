@@ -1,477 +1,57 @@
 # Maven OCI Publish Plugin
 
-A Gradle plugin that enables publishing Maven artifacts to OCI-compliant registries (like Docker registries) using the [ORAS (OCI Registry as Storage)](https://oras.land/) Java SDK.
+A Gradle plugin that enables **bidirectional** Maven artifact management with OCI-compliant registries using the [ORAS (OCI Registry as Storage)](https://oras.land/) protocol.
 
 ## Features
 
-- 📦 Publish Maven artifacts (JARs, POMs, etc.) to OCI registries
-- 🔐 Support for authentication (username/password, default Docker credentials)
-- 🛡️ Secure and insecure registry support
-- 🏗️ Integration with Gradle's Software Components API
-- 📋 Automatic task generation for publication-repository combinations
-- 🔧 Follows Gradle maven-publish plugin conventions
+- 📤 **Publish** Maven artifacts to OCI registries
+- 📥 **Consume** Maven dependencies from OCI registries  
+- 🔄 Seamless integration with existing Gradle repositories
+- 📂 Local caching for performance and offline access
+- 🔐 Authentication support (username/password)
+- 🗂️ Intelligent Maven ↔ OCI coordinate mapping
 
 ## Requirements
 
-- Gradle 6.0 or later
-- Java 17 or later (required by ORAS Java SDK)
+- **Gradle 6.0+**
+- **Java 17+** (required by ORAS Java SDK)
+- Network access to OCI registries
 
 ## Installation
 
-Add the plugin to your `build.gradle`:
-
 ```gradle
 plugins {
     id 'java'
-    id 'maven-publish'
+    id 'maven-publish'  // Required for publishing
     id 'io.seqera.maven-oci-publish' version 'x.x.x'
 }
 ```
 
-## Usage
+## Get Started
 
-### Basic Configuration
+### 📥 Consuming Dependencies from OCI
 
-```gradle
-// Configure standard Maven publication
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-        }
-    }
-}
-
-// Configure OCI publishing
-oci {
-    publications {
-        maven(OciPublication) {
-            from components.java
-            repository = 'myregistry.io/maven/my-group/my-artifact'
-            tag = '1.0.0'
-        }
-    }
-    
-    repositories {
-        myRegistry(OciRepository) {
-            url = 'https://myregistry.io'
-            credentials {
-                username = project.findProperty('registryUsername')
-                password = project.findProperty('registryPassword')
-            }
-        }
-    }
-}
-```
-
-### Advanced Configuration
+Add OCI repositories to your `repositories` block:
 
 ```gradle
-oci {
-    publications {
-        // Publication with custom artifacts
-        customMaven(OciPublication) {
-            from components.java
-            repository = 'ghcr.io/myorg/myapp'
-            tag = project.version
-            
-            // Configure Maven POM
-            pom {
-                name = 'My Application'
-                description = 'A sample application'
-                url = 'https://github.com/myorg/myapp'
-                
-                licenses {
-                    license {
-                        name = 'MIT License'
-                        url = 'https://opensource.org/licenses/MIT'
-                    }
-                }
-            }
-        }
-    }
-    
-    repositories {
-        // GitHub Container Registry
-        github(OciRepository) {
-            url = 'https://ghcr.io'
-            credentials {
-                username = System.getenv('GITHUB_ACTOR')
-                password = System.getenv('GITHUB_TOKEN')
-            }
-        }
-        
-        // Private registry with insecure connection (for development)
-        local(OciRepository) {
-            url = 'http://localhost:5000'
-            insecure = true
-        }
-    }
-}
-```
-
-### Anonymous Access
-
-For public registries that don't require authentication, simply omit the credentials configuration:
-
-```gradle
-oci {
-    publications {
-        maven(OciPublication) {
-            from components.java
-            repository = 'public-registry.io/maven/my-artifact'
-        }
-    }
-    
-    repositories {
-        publicRegistry(OciRepository) {
-            url = 'https://public-registry.io'
-            // No credentials needed - will use anonymous access
-        }
-    }
-}
-```
-
-### Using Default Docker Credentials
-
-If you're already logged into a Docker registry, the plugin can use those credentials:
-
-```gradle
-oci {
-    publications {
-        maven(OciPublication) {
-            from components.java
-            repository = 'myregistry.io/maven/my-artifact'
-        }
-    }
-    
-    repositories {
-        myRegistry(OciRepository) {
-            url = 'https://myregistry.io'
-            // No credentials needed - will use ~/.docker/config.json
-        }
-    }
-}
-```
-
-## Tasks
-
-The plugin automatically generates tasks following the pattern:
-`publish{PublicationName}PublicationTo{RepositoryName}Repository`
-
-Common tasks:
-- `publishMavenPublicationToMyRegistryRepository` - Publish specific publication to specific repository
-- `publishToOciRegistries` - Publish all publications to all repositories
-
-## Examples
-
-### Publishing to GitHub Container Registry
-
-```gradle
-oci {
-    publications {
-        maven(OciPublication) {
-            from components.java
-            repository = 'ghcr.io/myorg/myapp'
-            tag = project.version
-        }
-    }
-    
-    repositories {
-        github(OciRepository) {
-            url = 'https://ghcr.io'
-            credentials {
-                username = System.getenv('GITHUB_ACTOR')
-                password = System.getenv('GITHUB_TOKEN')
-            }
-        }
-    }
-}
-```
-
-### Publishing to Public Registry (Anonymous)
-
-```gradle
-oci {
-    publications {
-        maven(OciPublication) {
-            from components.java
-            repository = 'public-registry.io/maven/myorg/myapp'
-            tag = project.version
-        }
-    }
-    
-    repositories {
-        publicRegistry(OciRepository) {
-            url = 'https://public-registry.io'
-            // No credentials - uses anonymous access
-        }
-    }
-}
-```
-
-### Publishing to Multiple Registries
-
-```gradle
-oci {
-    publications {
-        maven(OciPublication) {
-            from components.java
-            repository = 'myorg/myapp'
-            tag = project.version
-        }
-    }
-    
-    repositories {
-        dockerHub(OciRepository) {
-            url = 'https://registry-1.docker.io'
-            credentials {
-                username = project.findProperty('dockerHubUsername')
-                password = project.findProperty('dockerHubPassword')
-            }
-        }
-        
-        github(OciRepository) {
-            url = 'https://ghcr.io'
-            credentials {
-                username = System.getenv('GITHUB_ACTOR')
-                password = System.getenv('GITHUB_TOKEN')
-            }
-        }
-    }
-}
-```
-
-## Authentication
-
-The plugin supports several authentication methods:
-
-1. **Anonymous Access**: No credentials required for public registries
-2. **Username/Password**: Explicitly configured credentials
-3. **Default Docker Credentials**: Uses `~/.docker/config.json`
-4. **Environment Variables**: Can be configured via environment variables
-
-### Using Environment Variables
-
-```gradle
-oci {
-    repositories {
-        myRegistry(OciRepository) {
-            url = 'https://myregistry.io'
-            credentials {
-                username = System.getenv('REGISTRY_USERNAME')
-                password = System.getenv('REGISTRY_PASSWORD')
-            }
-        }
-    }
-}
-```
-
-## Accessing Published Libraries
-
-Once you've published your Maven artifacts to an OCI registry, you can access them from other projects using the plugin's built-in consumption support.
-
-### Using OCI Repository Configuration
-
-The plugin provides seamless consumption of OCI-published libraries by configuring OCI repositories in the standard `repositories` block:
-
-```gradle
-// In your consuming project's build.gradle
-plugins {
-    id 'java'
-    id 'io.seqera.maven-oci-publish' version 'x.x.x'
-}
-
 repositories {
-    mavenCentral()
+    mavenCentral()  // Fallback for standard dependencies
     
-    // Configure OCI repositories for dependency resolution
     oci("myRegistry") {
-        url = 'https://myregistry.io'
-    }
-    
-    oci("localRegistry") {
-        url = 'http://localhost:5000'
-        insecure = true  // Allow HTTP connections
+        url = 'https://registry.example.com/maven'
     }
 }
 
 dependencies {
-    implementation 'com.example:my-library:1.0.0'
+    implementation 'com.example:my-library:1.0.0'  // Resolves from OCI if available
 }
 ```
 
-### With Authentication
+### 📤 Publishing to OCI Registries
 
-For private registries, the plugin automatically uses Docker credentials from `~/.docker/config.json` if available, or you can configure authentication through environment variables or system properties that the underlying ORAS SDK can access.
+Configure publishing with the `oci` extension:
 
 ```gradle
-repositories {
-    mavenCentral()
-    
-    // Configure authenticated OCI repository (uses Docker credentials if available)
-    oci("privateRegistry") {
-        url = 'https://private.registry.io'
-    }
-}
-```
-
-The plugin leverages the ORAS Java SDK's built-in authentication mechanisms, which support:
-- Docker configuration files (`~/.docker/config.json`)
-- Environment variables (`DOCKER_USERNAME`, `DOCKER_PASSWORD`)
-- Registry-specific authentication flows
-
-### Custom Repository Implementation
-
-You can create a custom Gradle plugin that implements a repository resolver for OCI registries:
-
-```gradle
-// Custom OCI repository resolver
-class OciRepositoryResolver implements RepositoryTransport {
-    
-    @Override
-    void get(URI location, File destination) throws IOException {
-        // Convert Maven coordinates to OCI reference
-        String ociRef = convertMavenToOciRef(location)
-        
-        // Use ORAS Java SDK to pull artifact
-        Registry registry = Registry.builder().defaults().build()
-        ContainerRef ref = ContainerRef.parse(ociRef)
-        registry.pullArtifact(ref, destination.getParent())
-    }
-    
-    private String convertMavenToOciRef(URI location) {
-        // Convert: /com/example/my-library/1.0.0/my-library-1.0.0.jar
-        // To: myregistry.io/maven/com.example/my-library:1.0.0
-        // Implementation details...
-    }
-}
-```
-
-### Integration with Existing Build Systems
-
-#### Gradle Project
-
-```gradle
-plugins {
-    id 'java'
-    id 'maven-publish'
-}
-
-repositories {
-    mavenCentral()
-    
-    // OCI registry as Maven repository
-    maven {
-        name = "CompanyOciRegistry"
-        url = uri("oci+https://registry.company.com/maven")
-        credentials {
-            username = System.getenv('REGISTRY_USERNAME')
-            password = System.getenv('REGISTRY_PASSWORD')
-        }
-    }
-}
-
-dependencies {
-    implementation 'com.company:shared-library:2.1.0'
-    implementation 'com.company:common-utils:1.5.0'
-    testImplementation 'junit:junit:4.13.2'
-}
-```
-
-#### Maven Project
-
-```xml
-<project>
-    <repositories>
-        <repository>
-            <id>company-oci-registry</id>
-            <name>Company OCI Registry</name>
-            <url>oci+https://registry.company.com/maven</url>
-        </repository>
-    </repositories>
-    
-    <dependencies>
-        <dependency>
-            <groupId>com.company</groupId>
-            <artifactId>shared-library</artifactId>
-            <version>2.1.0</version>
-        </dependency>
-    </dependencies>
-</project>
-```
-
-### Repository Proxy Service
-
-For organizations, you can set up a proxy service that translates Maven repository requests to OCI pulls:
-
-```yaml
-# docker-compose.yml for OCI-to-Maven proxy
-version: '3.8'
-services:
-  oci-maven-proxy:
-    image: company/oci-maven-proxy:latest
-    ports:
-      - "8080:8080"
-    environment:
-      - REGISTRY_URL=https://registry.company.com
-      - REGISTRY_USERNAME=${REGISTRY_USERNAME}
-      - REGISTRY_PASSWORD=${REGISTRY_PASSWORD}
-    volumes:
-      - ./cache:/app/cache
-```
-
-Then use it as a regular Maven repository:
-
-```gradle
-repositories {
-    maven {
-        name = "OciMavenProxy"
-        url = uri("http://localhost:8080/maven")
-    }
-}
-```
-
-### Automated Resolution
-
-You can also implement automatic resolution that checks multiple sources:
-
-```gradle
-repositories {
-    mavenCentral()
-    
-    // Fallback to OCI registry for internal dependencies
-    maven {
-        name = "InternalOciRegistry"
-        url = uri("oci+https://internal-registry.company.com/maven")
-        credentials {
-            username = System.getenv('INTERNAL_REGISTRY_USERNAME')
-            password = System.getenv('INTERNAL_REGISTRY_PASSWORD')
-        }
-        content {
-            // Only look for company artifacts in OCI registry
-            includeGroup "com.company"
-            includeGroup "com.company.internal"
-        }
-    }
-}
-```
-
-### Complete Lifecycle Example
-
-Here's a complete example showing how to publish a library and consume it:
-
-**1. Publishing Project (`publisher/build.gradle`)**
-```gradle
-plugins {
-    id 'java'
-    id 'maven-publish'
-    id 'io.seqera.maven-oci-publish' version 'x.x.x'
-}
-
-group = 'com.example'
-version = '1.0.0'
-
 publishing {
     publications {
         maven(MavenPublication) {
@@ -480,140 +60,409 @@ publishing {
     }
 }
 
-mavenOci {
+oci {
     publications {
         maven {
             from components.java
-            repository = 'maven/com.example/my-library'
-            tag = project.version
         }
     }
     
     repositories {
         myRegistry {
             url = 'https://registry.example.com'
+            namespace = 'maven'
             credentials {
-                username = project.findProperty('registryUsername')
-                password = project.findProperty('registryPassword')
+                username = 'user'
+                password = 'pass'
             }
         }
     }
 }
 ```
 
-**2. Publish the library:**
+Then publish:
 ```bash
-./gradlew publishMavenPublicationToMyRegistryRepository
+./gradlew publishToOciRegistries
 ```
 
-**3. Consuming Project (`consumer/build.gradle`)**
-```gradle
-plugins {
-    id 'java'
-}
+## Maven ↔ OCI Coordinate Mapping and Resolution
 
+The Maven OCI Publish Plugin enables storing and retrieving Maven artifacts in OCI (Open Container Initiative) registries using the ORAS (OCI Registry as Storage) protocol. This requires a systematic mapping between Maven's coordinate system and OCI's naming conventions.
+
+### Coordinate Mapping
+
+Maven uses a three-part coordinate system:
+```
+groupId:artifactId:version
+```
+
+For example:
+- `com.example:my-library:1.0.0`
+- `org.springframework:spring-core:5.3.21`
+- `io.seqera.nextflow:nextflow-core:22.04.0`
+
+OCI registries use a hierarchical naming system:
+```
+registry.com/namespace/repository:tag
+```
+
+### Mapping Algorithm
+
+The plugin maps Maven coordinates to OCI references using the following algorithm:
+
+1. **Registry Base**: Use the configured registry URL as the base
+2. **Group Sanitization**: Transform the Maven `groupId` to be OCI-compliant
+3. **Repository Path**: Combine sanitized group and `artifactId`
+4. **Tag**: Use the Maven `version` as the OCI tag
+
+#### Complete Mapping Formula
+```
+Maven: groupId:artifactId:version
+OCI:   registry.com/[namespace/]sanitized-groupId/artifactId:version
+```
+
+### Group ID Sanitization Rules
+
+Maven group IDs often contain characters that are not valid in OCI repository names. The sanitization process applies these transformations:
+
+1. **Case Normalization**: Convert to lowercase
+   - `Com.Example` → `com.example`
+
+2. **Dot Replacement**: Replace dots with hyphens for Docker compatibility
+   - `com.example` → `com-example`
+
+3. **Invalid Character Removal**: Keep only alphanumeric, dots, hyphens, underscores
+   - `com.example@version` → `com-exampleversion`
+   - `group/with/slashes` → `groupwithslashes`
+
+4. **Separator Consolidation**: Replace consecutive separators with single hyphens
+   - `com..example` → `com-example`
+   - `mixed.-._.separators` → `mixed-separators`
+
+5. **Trimming**: Remove leading and trailing separators
+   - `.com.example.` → `com-example`
+
+6. **Safety Prefix**: Add "g" prefix if result starts with hyphen or underscore (handled by cleanup)
+   - `-example` → `example` (separators are removed)
+
+### Mapping Examples
+
+| Maven Coordinate | Sanitized Group | OCI Reference |
+|------------------|-----------------|---------------|
+| `com.example:my-lib:1.0.0` | `com-example` | `registry.com/com-example/my-lib:1.0.0` |
+| `org.springframework:spring-core:5.3.21` | `org-springframework` | `registry.com/org-springframework/spring-core:5.3.21` |
+| `io.seqera.nextflow:nextflow-core:22.04.0` | `io-seqera-nextflow` | `registry.com/io-seqera-nextflow/nextflow-core:22.04.0` |
+| `Com.EXAMPLE.Test:artifact:1.0` | `com-example-test` | `registry.com/com-example-test/artifact:1.0` |
+| `com.fasterxml.jackson.core:jackson-core:2.13.0` | `com-fasterxml-jackson-core` | `registry.com/com-fasterxml-jackson-core/jackson-core:2.13.0` |
+
+### Namespace Support
+
+OCI registries often use namespaces to organize repositories. The plugin supports namespaces in two ways:
+
+1. **URL Path Namespace**: Embedded in the registry URL
+   ```gradle
+   oci("myRegistry") {
+       url = 'https://registry.com/my-namespace'
+   }
+   ```
+   Result: `registry.com/my-namespace/sanitized-group/artifact:version`
+
+2. **Explicit Namespace**: Configured separately (for publishing)
+   ```gradle
+   repositories {
+       docker {
+           url = 'https://registry.com'
+           namespace = 'my-namespace'
+       }
+   }
+   ```
+   Result: `registry.com/my-namespace/sanitized-group/artifact:version`
+
+## Resolution Process
+
+### Dependency Resolution Flow
+
+When Gradle resolves dependencies that might be available in OCI registries, the following process occurs:
+
+```mermaid
+graph TD
+    A[Gradle Dependency Resolution] --> B[Before Resolve Hook]
+    B --> C{Check Local Cache}
+    C -->|Found| D[Use Cached Artifacts]
+    C -->|Missing| E[Build OCI Reference]
+    E --> F[Attempt OCI Download]
+    F -->|Success| G[Cache Artifacts]
+    F -->|Failure| H[Continue with Next Repository]
+    G --> I[Gradle Uses Cached Files]
+    H --> J[Try Maven Central, etc.]
+    D --> I
+    J --> K[Build Continues]
+    I --> K
+```
+
+### Detailed Resolution Steps
+
+1. **Hook Installation**: When an OCI repository is configured, the plugin installs hooks into Gradle's dependency resolution system.
+
+2. **Resolution Trigger**: Before Gradle resolves dependencies, the `beforeResolve` hook is triggered for each configuration.
+
+3. **Dependency Analysis**: For each dependency in the configuration:
+   - Extract `groupId`, `artifactId`, and `version`
+   - Check if artifacts already exist in the local cache
+
+4. **Cache Check**: Look for artifacts in the local cache directory:
+   ```
+   PROJECT_ROOT/.gradle/oci-cache/REPOSITORY_NAME/groupId/artifactId/version/
+   ```
+
+5. **OCI Resolution** (if not cached):
+   - Build OCI reference using the mapping algorithm
+   - Create ORAS registry client with appropriate authentication
+   - Attempt to pull the artifact from the OCI registry
+   - If successful, organize files in Maven repository structure
+
+6. **File Organization**: Downloaded artifacts are organized as:
+   ```
+   cache/groupId/artifactId/version/
+   ├── artifactId-version.jar
+   ├── artifactId-version.pom
+   ├── artifactId-version-sources.jar    (if available)
+   └── artifactId-version-javadoc.jar    (if available)
+   ```
+
+7. **POM Generation**: If no POM file is included in the OCI artifact, a minimal POM is generated with basic metadata.
+
+8. **Gradle Integration**: Gradle continues its normal resolution process using the cached files as if they came from a standard Maven repository.
+
+### Error Handling and Fallbacks
+
+The resolution process is designed to be resilient:
+
+- **Network Failures**: Logged but don't break the build
+- **Authentication Issues**: Fall back to anonymous access if possible
+- **Missing Artifacts**: Continue with other repositories in the chain
+- **Invalid OCI References**: Skip and try other sources
+- **Registry Unavailable**: Gracefully degrade to other repositories
+
+### Caching Strategy
+
+The plugin uses a sophisticated caching strategy:
+
+- **Location**: `PROJECT_ROOT/.gradle/oci-cache/REPOSITORY_NAME/`
+- **Persistence**: Survives `gradle clean` operations
+- **Structure**: Standard Maven repository layout
+- **Performance**: Cached artifacts are reused across builds
+- **Cleanup**: Temporary download directories are cleaned up promptly
+
+### Performance Considerations
+
+- **Parallel Resolution**: Multiple dependencies can be resolved concurrently
+- **Incremental Downloads**: Only missing artifacts are downloaded
+- **Connection Reuse**: Registry connections are reused when possible
+- **Timeout Handling**: Reasonable timeouts prevent hanging builds
+- **Selective Resolution**: Only attempts OCI resolution for configured repositories
+
+## Plugin Tasks
+
+The plugin creates the following tasks:
+
+### Publishing Tasks
+- `publishToOciRegistries` - Publishes all publications to all OCI repositories
+- `publish<Publication>To<Repository>Repository` - Publishes specific publication to specific repository
+  - Example: `publishMavenPublicationToMyRegistryRepository`
+
+### Standard Gradle Tasks
+The plugin integrates with standard Gradle publishing:
+- `publish` - Publishes to all configured repositories (Maven + OCI)
+- `publishToMavenLocal` - Local Maven repository publishing
+- All standard `maven-publish` plugin tasks
+
+## Authentication
+
+### Username/Password
+```gradle
+oci("registry") {
+    url = 'https://registry.example.com'
+    credentials {
+        username = 'user'
+        password = 'password'
+    }
+}
+```
+
+### Environment Variables
+```gradle
+oci("registry") {
+    url = 'https://registry.example.com'
+    credentials {
+        username = System.getenv('REGISTRY_USERNAME')
+        password = System.getenv('REGISTRY_PASSWORD')
+    }
+}
+```
+
+## Advanced Configuration
+
+### Insecure Registries (HTTP)
+```gradle
+oci("localDev") {
+    url = 'http://localhost:5000'
+    insecure = true
+}
+```
+
+### Multiple Registries
+```gradle
+repositories {
+    oci("internal") {
+        url = 'https://internal.company.com/maven'
+        credentials { /* ... */ }
+    }
+    
+    oci("public") {
+        url = 'https://public.registry.com/maven'
+    }
+    
+    mavenCentral()  // Fallback
+}
+```
+
+### Custom Namespace
+```gradle
+oci {
+    repositories {
+        custom {
+            url = 'https://registry.com'
+            namespace = 'my-org/maven-artifacts'
+        }
+    }
+}
+```
+
+## Configuration Examples
+
+### Consumer Configuration
+
+```gradle
 repositories {
     mavenCentral()
     
-    // Custom OCI repository resolver (implementation depends on your setup)
-    maven {
-        name = "OciMavenRegistry"
-        url = uri("oci+https://registry.example.com/maven")
+    // Public OCI registry
+    oci("seqeraPublic") {
+        url = 'https://public.cr.seqera.io/maven'
+    }
+    
+    // Private registry with authentication
+    oci("companyPrivate") {
+        url = 'https://registry.company.com/maven'
         credentials {
-            username = project.findProperty('registryUsername')
-            password = project.findProperty('registryPassword')
+            username = project.findProperty('registryUser')
+            password = project.findProperty('registryPass')
         }
+    }
+    
+    // Local development registry
+    oci("localDev") {
+        url = 'http://localhost:5000'
+        insecure = true
     }
 }
 
 dependencies {
-    implementation 'com.example:my-library:1.0.0'
+    implementation 'com.company:internal-lib:1.0.0'  // Tries OCI first
+    implementation 'org.springframework:spring-core:5.3.21'  // Falls back to Maven Central
 }
 ```
 
-**4. Use the library:**
-```java
-import com.example.MyLibrary;
+### Publisher Configuration
 
-public class MyApp {
-    public static void main(String[] args) {
-        MyLibrary.doSomething(); // Use the OCI-published library
+```gradle
+oci {
+    publications {
+        maven {
+            from components.java
+        }
+    }
+    
+    repositories {
+        dockerHub {
+            url = 'https://registry-1.docker.io'
+            namespace = 'maven'
+            credentials {
+                username = System.getenv('DOCKER_USERNAME')
+                password = System.getenv('DOCKER_PASSWORD')
+            }
+        }
     }
 }
 ```
 
-This approach allows you to treat OCI registries as Maven repositories, making them seamlessly integrated into your build process.
+## Best Practices
 
-## Supported Registries
+1. **Group ID Design**: Use consistent, hierarchical group IDs that sanitize well
+2. **Registry Organization**: Use namespaces to organize different types of artifacts
+3. **Authentication**: Use environment variables or Gradle properties for credentials
+4. **Fallback Strategy**: Always include Maven Central or other standard repositories
+5. **Cache Management**: Monitor cache sizes and clean up if necessary
+6. **Network Configuration**: Configure appropriate timeouts for your network environment
 
-The plugin supports any OCI-compliant registry, including:
+## Known Limitations
 
-- GitHub Container Registry (ghcr.io)
-- Docker Hub (registry-1.docker.io)
-- Azure Container Registry (ACR)
-- AWS Elastic Container Registry (ECR)
-- Google Container Registry (GCR)
-- Harbor
-- Quay.io
-- Private registries
-
-## Integration with CI/CD
-
-### GitHub Actions
-
-```yaml
-- name: Publish to GitHub Container Registry
-  run: ./gradlew publishMavenPublicationToGithubRepository
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### GitLab CI
-
-```yaml
-publish:
-  script:
-    - ./gradlew publishToOciRegistries
-  variables:
-    REGISTRY_USERNAME: $CI_REGISTRY_USER
-    REGISTRY_PASSWORD: $CI_REGISTRY_PASSWORD
-```
+- **Authentication**: Currently supports username/password only (no OAuth, tokens, or Docker credential helpers)
+- **Registry Compatibility**: Tested with Docker Hub, GitHub Container Registry, and generic OCI registries
+- **Metadata**: POM files may be generated if not included in OCI artifacts
+- **Transitive Dependencies**: Only direct artifacts are cached; transitive dependency metadata relies on generated POMs
+- **Parallel Downloads**: OCI resolution is sequential (no parallel downloads)
+- **Error Recovery**: Failed OCI resolutions require cache cleanup for retry
+- **Registry Features**: No support for OCI registry-specific features (signatures, attestations, etc.)
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Java Version**: Ensure you're using Java 17 or later
-2. **Authentication**: Verify your credentials are correct
-3. **Registry URL**: Ensure the registry URL is correct and accessible
-4. **Insecure Registries**: Use `insecure = true` for HTTP registries
-
-### Debug Mode
-
-Enable debug logging to see more details:
-
-```gradle
-logging.level = LogLevel.DEBUG
+### Debug Logging
+Enable debug logging to see detailed resolution information:
+```bash
+./gradlew build --debug
 ```
 
-## Contributing
+This will show:
+- OCI reference generation
+- Cache hit/miss information
+- Network requests and responses
+- Error details and stack traces
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+### Clear Cache
+```bash
+rm -rf .gradle/oci-cache/
+```
+
+### Common Issues
+
+1. **Sanitization Problems**: Check how your group ID is being sanitized
+2. **Authentication Failures**: Verify credentials and registry permissions
+3. **Network Issues**: Check connectivity to the OCI registry
+4. **Cache Corruption**: Delete the cache directory and rebuild
+5. **Network connectivity**: Check firewall and proxy settings  
+6. **Dependency not found**: Verify OCI reference mapping
+
+## Examples
+
+Working examples in [`example/`](example/):
+- [`example/publisher/`](example/publisher/) - Publishing artifacts
+- [`example/consumer/`](example/consumer/) - Consuming dependencies
+
+```bash
+# Test publisher
+cd example/publisher && ./gradlew publishToOciRegistries --dry-run
+
+# Test consumer
+cd example/consumer && ./gradlew run
+```
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
 
-## Related Projects
+## Acknowledgments
 
-- [ORAS](https://oras.land/) - OCI Registry as Storage
-- [ORAS Java SDK](https://github.com/oras-project/oras-java) - Java SDK for ORAS
-- [Maven ORAS Plugin](https://github.com/Tosan/oras-maven-plugin) - Similar plugin for Maven
-
-## Support
-
-For questions, issues, or contributions, please visit the [GitHub repository](https://github.com/pditommaso/maven-oci-publish).
+- [ORAS Java SDK](https://github.com/oras-project/oras-java) - OCI Registry as Storage
+- Inspired by [oras-maven-plugin](https://github.com/Tosan/oras-maven-plugin)

@@ -20,7 +20,6 @@ import org.gradle.api.Action;
 import org.gradle.api.Named;
 import org.gradle.api.credentials.PasswordCredentials;
 import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
 
 import javax.inject.Inject;
 import java.util.Optional;
@@ -29,13 +28,13 @@ import java.util.Optional;
  * Specification for an OCI repository that can be used as a Maven repository.
  * This defines the configuration for accessing OCI registries as artifact repositories.
  */
-public abstract class OciRepositorySpec implements Named {
+public abstract class MavenOciRepositorySpec implements Named {
     
     private final String name;
     private PasswordCredentials credentials;
     
     @Inject
-    public OciRepositorySpec(String name) {
+    public MavenOciRepositorySpec(String name) {
         this.name = name;
     }
     

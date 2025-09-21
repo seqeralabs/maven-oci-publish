@@ -41,7 +41,7 @@ import spock.lang.Specification
  * - Tests against HTTP registry with insecure mode for simplicity
  * - Validates both publishing and consumption patterns
  */
-class MavenOciLifecycleTest extends Specification {
+class MavenOciLifecycleIntegrationTest extends Specification {
 
     // Standard Docker registry port for consistency across tests
     static int PORT = 5000

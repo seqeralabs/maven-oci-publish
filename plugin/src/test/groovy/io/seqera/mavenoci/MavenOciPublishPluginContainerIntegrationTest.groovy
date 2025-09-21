@@ -52,7 +52,7 @@ import spock.lang.Specification
  * - Registry authentication and security modes
  * - Error conditions and edge case handling
  */
-class MavenOciPublishPluginContainerTest extends Specification {
+class MavenOciPublishPluginContainerIntegrationTest extends Specification {
 
     /**
      * Shared Docker Registry container for all tests in this class.

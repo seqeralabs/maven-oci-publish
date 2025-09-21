@@ -4,8 +4,16 @@ plugins {
     id 'io.seqera.maven-oci-publish'
 }
 
+def getRequiredProperty(String propertyName) {
+    def value = project.findProperty(propertyName)
+    if (value == null || value.toString().trim().isEmpty()) {
+        throw new GradleException("Required property '${propertyName}' is missing. Please set it in gradle.properties or via -P${propertyName}=value")
+    }
+    return value
+}
+
 group = 'io.seqera'
-version = '1.0.0'
+version = '2.0.0'
 
 repositories {
     mavenCentral()
@@ -59,41 +67,14 @@ oci {
     }
     
     repositories {
-        // Test with cr.seqera.io using ORAS SDK 0.2.14
-        seqeraPublic {
-            url = 'https://cr.seqera.io'
+        docker {
+            url = 'https://public.cr.stage-seqera.io'
             namespace = 'maven'
             credentials {
-                username = project.findProperty('dockerHubUsername') ?: ''
-                password = project.findProperty('dockerHubPassword') ?: ''
+                username = getRequiredProperty('ociRegistryUsername')
+                password = getRequiredProperty('ociRegistryPassword')
             }
         }
-    }
-}
-
-// Custom task to show publishing information
-tasks.register('showPublishInfo') {
-    doLast {
-        println "\n🚀 OCI Publishing Configuration (Enhanced Coordinate System):"
-        println "   Registry: https://public.cr.stage-seqera.io/maven"
-        println "   Maven Coordinates: ${project.group}:shared-library:${project.version}"
-        println "   Sanitized Group: ${project.group.replace('.', '-')}"
-        println "   OCI Reference: public.cr.stage-seqera.io/maven/${project.group.replace('.', '-')}/shared-library:${project.version}"
-        println "   Access: Anonymous (no credentials required)"
-        
-        println "\n📋 Available publishing tasks:"
-        println "   ./gradlew publishMavenPublicationToSeqeraPublicRepository"
-        println "   ./gradlew publishToOciRegistries"
-        
-        println "\n🔧 Enhanced Coordinate System Features:"
-        println "   ✅ Automatic namespace inference from URI"
-        println "   ✅ Docker-compatible group sanitization (io.seqera → io-seqera)"
-        println "   ✅ Hierarchical organization"
-        println "   ✅ Anonymous access support"
-        
-        println "\n📦 After publishing, consumers can use:"
-        println "   repositories { ociRepositories { seqeraPublic { url = 'https://public.cr.stage-seqera.io/maven' } } }"
-        println "   dependencies { implementation 'io.seqera:shared-library:1.0.0' }"
     }
 }
 

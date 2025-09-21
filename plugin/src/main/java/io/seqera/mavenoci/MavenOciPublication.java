@@ -30,7 +30,7 @@ import javax.inject.Inject;
  * Configuration for publishing Maven artifacts to OCI registries.
  * Similar to MavenPublication but adapted for OCI storage.
  */
-public class OciPublication implements Named {
+public class MavenOciPublication implements Named {
     
     private final String name;
     private final Property<String> groupId;
@@ -44,7 +44,7 @@ public class OciPublication implements Named {
     private Action<Object> pomAction;
     
     @Inject
-    public OciPublication(String name, ObjectFactory objectFactory) {
+    public MavenOciPublication(String name, ObjectFactory objectFactory) {
         this.name = name;
         this.objectFactory = objectFactory;
         this.groupId = objectFactory.property(String.class);

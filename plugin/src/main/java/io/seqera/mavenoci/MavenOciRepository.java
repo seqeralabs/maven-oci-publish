@@ -29,7 +29,7 @@ import javax.inject.Inject;
  * Configuration for an OCI registry repository.
  * Handles authentication and connection details for OCI-compliant registries.
  */
-public class OciRepository implements Named {
+public class MavenOciRepository implements Named {
     
     private final String name;
     private final Property<String> url;
@@ -39,7 +39,7 @@ public class OciRepository implements Named {
     private final ObjectFactory objectFactory;
     
     @Inject
-    public OciRepository(String name, ObjectFactory objectFactory) {
+    public MavenOciRepository(String name, ObjectFactory objectFactory) {
         this.name = name;
         this.objectFactory = objectFactory;
         this.url = objectFactory.property(String.class);
@@ -117,11 +117,11 @@ public class OciRepository implements Named {
      * Parses the registry URI to extract host and namespace information.
      * @return OciRegistryInfo containing parsed registry details
      */
-    public OciRegistryUriParser.OciRegistryInfo parseRegistryInfo() {
+    public MavenOciRegistryUriParser.OciRegistryInfo parseRegistryInfo() {
         if (!url.isPresent()) {
             throw new IllegalStateException("Registry URL is not configured");
         }
-        return OciRegistryUriParser.parse(url.get());
+        return MavenOciRegistryUriParser.parse(url.get());
     }
     
     /**
@@ -159,7 +159,7 @@ public class OciRepository implements Named {
         }
         
         // Add sanitized group
-        String sanitizedGroup = MavenGroupSanitizer.sanitize(groupId);
+        String sanitizedGroup = MavenOciGroupSanitizer.sanitize(groupId);
         ref.append("/").append(sanitizedGroup);
         
         // Add artifact and version

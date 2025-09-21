@@ -19,7 +19,7 @@ package io.seqera.mavenoci;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class OciRegistryUriParser {
+public class MavenOciRegistryUriParser {
     
     public static OciRegistryInfo parse(String uri) {
         if (uri == null || uri.trim().isEmpty()) {
@@ -90,7 +90,7 @@ public class OciRegistryUriParser {
             }
             
             // Add sanitized group
-            String sanitizedGroup = MavenGroupSanitizer.sanitize(groupId);
+            String sanitizedGroup = MavenOciGroupSanitizer.sanitize(groupId);
             ref.append("/").append(sanitizedGroup);
             
             // Add artifact and version

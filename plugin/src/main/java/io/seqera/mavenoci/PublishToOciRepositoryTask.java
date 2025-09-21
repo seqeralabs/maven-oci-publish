@@ -35,10 +35,8 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.UntrackedTask;
 
-import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.nio.file.Path;
 
 /**
  * Task for publishing Maven artifacts to OCI registries using ORAS.
@@ -206,7 +204,7 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
                 return buildOciReferenceWithNamespace(getGroupId().get(), getArtifactId().get(), getVersion().get());
             } else {
                 // Use URL parsing approach
-                OciRegistryUriParser.OciRegistryInfo registryInfo = OciRegistryUriParser.parse(getRegistryUrl().get());
+                MavenOciRegistryUriParser.OciRegistryInfo registryInfo = MavenOciRegistryUriParser.parse(getRegistryUrl().get());
                 return registryInfo.buildOciReference(getGroupId().get(), getArtifactId().get(), getVersion().get());
             }
         } else if (getRepository().isPresent() && getTag().isPresent()) {
@@ -240,7 +238,7 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
         }
         
         // Add sanitized group
-        String sanitizedGroup = MavenGroupSanitizer.sanitize(groupId);
+        String sanitizedGroup = MavenOciGroupSanitizer.sanitize(groupId);
         logger.info("Sanitized group: {}", sanitizedGroup);
         ref.append("/").append(sanitizedGroup);
         

@@ -25,23 +25,72 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 
 /**
- * Resolver that retrieves Maven artifacts from OCI registries using ORAS protocol.
- * This class handles the conversion from Maven coordinates to OCI references
- * and downloads artifacts using the ORAS Java SDK.
+ * Resolver that retrieves Maven artifacts from OCI registries using the ORAS protocol.
+ * 
+ * <p>This class is the core component for OCI artifact resolution, handling:</p>
+ * <ul>
+ *   <li>Conversion from Maven coordinates to OCI references</li>
+ *   <li>Authentication with OCI registries</li>
+ *   <li>Downloading artifacts using the ORAS Java SDK</li>
+ *   <li>Registry connectivity and error handling</li>
+ * </ul>
+ * 
+ * <h3>Maven to OCI Coordinate Mapping</h3>
+ * <p>Maven coordinates are mapped to OCI references using the following pattern:</p>
+ * <pre>
+ * Maven: {@code groupId:artifactId:version}
+ * OCI:   {@code registry.com/sanitized-group-id/artifactId:version}
+ * </pre>
+ * 
+ * <p>Examples:</p>
+ * <ul>
+ *   <li>{@code com.example:my-lib:1.0.0} → {@code registry.com/com-example/my-lib:1.0.0}</li>
+ *   <li>{@code org.springframework:spring-core:5.3.21} → {@code registry.com/org-springframework/spring-core:5.3.21}</li>
+ * </ul>
+ * 
+ * <h3>Registry Configuration</h3>
+ * <p>The resolver supports:</p>
+ * <ul>
+ *   <li><strong>Secure registries</strong>: HTTPS with optional authentication</li>
+ *   <li><strong>Insecure registries</strong>: HTTP for local development</li>
+ *   <li><strong>Anonymous access</strong>: Public registries without credentials</li>
+ *   <li><strong>Authenticated access</strong>: Username/password or token-based auth</li>
+ * </ul>
+ * 
+ * <h3>Error Handling</h3>
+ * <p>The resolver is designed to be resilient:</p>
+ * <ul>
+ *   <li>Network timeouts and connectivity issues are caught and logged</li>
+ *   <li>Missing artifacts return {@code false} rather than throwing exceptions</li>
+ *   <li>Authentication failures are handled gracefully</li>
+ *   <li>Invalid registry URLs are detected early</li>
+ * </ul>
+ * 
+ * <h3>Performance Considerations</h3>
+ * <p>For optimal performance:</p>
+ * <ul>
+ *   <li>Registry instances are reused when possible</li>
+ *   <li>Artifact existence checks avoid unnecessary downloads</li>
+ *   <li>Temporary directories are cleaned up promptly</li>
+ *   <li>Failed resolutions are cached to avoid repeated attempts</li>
+ * </ul>
+ * 
+ * @see MavenOciRepositoryFactory
+ * @see MavenOciGroupSanitizer
+ * @since 1.0
  */
-public class OciMavenResolver {
+public class MavenOciResolver {
     
-    private static final Logger logger = Logging.getLogger(OciMavenResolver.class);
+    private static final Logger logger = Logging.getLogger(MavenOciResolver.class);
     
     private final String registryUrl;
     private final boolean insecure;
     private final String username;
     private final String password;
     
-    public OciMavenResolver(String registryUrl, boolean insecure, String username, String password) {
+    public MavenOciResolver(String registryUrl, boolean insecure, String username, String password) {
         this.registryUrl = registryUrl;
         this.insecure = insecure;
         this.username = username;
@@ -59,7 +108,7 @@ public class OciMavenResolver {
      */
     public boolean resolveArtifacts(String groupId, String artifactId, String version, Path targetDir) {
         try {
-            logger.info("Resolving Maven artifacts {}:{}:{} from OCI registry: {}", 
+            logger.debug("Resolving Maven artifacts {}:{}:{} from OCI registry: {}", 
                        groupId, artifactId, version, registryUrl);
             
             // Create OCI reference from Maven coordinates
@@ -76,13 +125,13 @@ public class OciMavenResolver {
             Files.createDirectories(targetDir);
             
             // Pull artifacts from OCI registry
-            logger.info("Pulling artifacts from OCI registry: {}", ociRef);
+            logger.debug("Pulling artifacts from OCI registry: {}", ociRef);
             registry.pullArtifact(ref, targetDir, false);
             
-            logger.info("Successfully pulled artifacts from OCI registry");
+            logger.debug("Successfully pulled artifacts from OCI registry");
             
             // Just return true - file mapping is handled by OciMavenRepositoryFactory.moveArtifactFiles()
-            logger.info("Successfully resolved Maven artifacts from OCI registry");
+            logger.debug("Successfully resolved Maven artifacts from OCI registry");
             return true;
             
         } catch (Exception e) {
@@ -104,7 +153,7 @@ public class OciMavenResolver {
         ref.append(registryHost);
         
         // Add sanitized group
-        String sanitizedGroup = MavenGroupSanitizer.sanitize(groupId);
+        String sanitizedGroup = MavenOciGroupSanitizer.sanitize(groupId);
         ref.append("/").append(sanitizedGroup);
         
         // Add artifact and version
@@ -121,19 +170,15 @@ public class OciMavenResolver {
         
         if (insecure) {
             if (username != null && password != null) {
-                logger.debug("Using insecure mode with credentials");
                 String registryHost = registryUrl.replaceFirst("^https?://", "");
                 builder.insecure(registryHost, username, password);
             } else {
-                logger.debug("Using insecure mode with anonymous access");
                 builder.insecure();
             }
         } else {
             if (username != null && password != null) {
-                logger.debug("Using secure mode with credentials");
                 builder.defaults(username, password);
             } else {
-                logger.debug("Using secure mode with default credentials");
                 builder.defaults();
             }
         }

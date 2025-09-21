@@ -35,16 +35,16 @@ public class MavenOciPublishingExtension {
     
     private static final Logger logger = Logging.getLogger(MavenOciPublishingExtension.class);
     
-    private final NamedDomainObjectContainer<OciPublication> publications;
-    private final NamedDomainObjectContainer<OciRepository> repositories;
+    private final NamedDomainObjectContainer<MavenOciPublication> publications;
+    private final NamedDomainObjectContainer<MavenOciRepository> repositories;
     private final ObjectFactory objectFactory;
     private Project project;
     
     @Inject
     public MavenOciPublishingExtension(ObjectFactory objectFactory) {
         this.objectFactory = objectFactory;
-        this.publications = objectFactory.domainObjectContainer(OciPublication.class);
-        this.repositories = objectFactory.domainObjectContainer(OciRepository.class);
+        this.publications = objectFactory.domainObjectContainer(MavenOciPublication.class);
+        this.repositories = objectFactory.domainObjectContainer(MavenOciRepository.class);
     }
     
     /**
@@ -65,28 +65,28 @@ public class MavenOciPublishingExtension {
     /**
      * Configures the publications for this extension.
      */
-    public void publications(Action<? super NamedDomainObjectContainer<OciPublication>> action) {
+    public void publications(Action<? super NamedDomainObjectContainer<MavenOciPublication>> action) {
         action.execute(publications);
     }
     
     /**
      * Configures the repositories for this extension.
      */
-    public void repositories(Action<? super NamedDomainObjectContainer<OciRepository>> action) {
+    public void repositories(Action<? super NamedDomainObjectContainer<MavenOciRepository>> action) {
         action.execute(repositories);
     }
     
     /**
      * Returns the publications container.
      */
-    public NamedDomainObjectContainer<OciPublication> getPublications() {
+    public NamedDomainObjectContainer<MavenOciPublication> getPublications() {
         return publications;
     }
     
     /**
      * Returns the repositories container.
      */
-    public NamedDomainObjectContainer<OciRepository> getRepositories() {
+    public NamedDomainObjectContainer<MavenOciRepository> getRepositories() {
         return repositories;
     }
     
@@ -99,22 +99,22 @@ public class MavenOciPublishingExtension {
             throw new IllegalStateException("Project context not set. This method should be called after plugin application.");
         }
         
-        logger.info("Creating named OCI repository '{}' using closure syntax", name);
+        logger.debug("Creating named OCI repository '{}' using closure syntax", name);
         
         // Create OCI repository specification with the provided name
-        OciRepositorySpec spec = objectFactory.newInstance(OciRepositorySpec.class, name);
+        MavenOciRepositorySpec spec = objectFactory.newInstance(MavenOciRepositorySpec.class, name);
         
         // Configure using the spec as delegate (isolated from project context)
         closure.setDelegate(spec);
         closure.setResolveStrategy(Closure.DELEGATE_FIRST);
         closure.call();
         
-        logger.info("Creating OCI repository '{}' with URL: {}", spec.getName(), spec.getUrl().getOrNull());
+        logger.debug("Creating OCI repository '{}' with URL: {}", spec.getName(), spec.getUrl().getOrNull());
         
         // Create and register Maven repository that wraps OCI functionality
         return project.getRepositories().maven(mavenRepo -> {
             mavenRepo.setName(spec.getName());
-            OciMavenRepositoryFactory.createOciMavenRepository(spec, mavenRepo, project);
+            MavenOciRepositoryFactory.createOciMavenRepository(spec, mavenRepo, project);
         });
     }
     

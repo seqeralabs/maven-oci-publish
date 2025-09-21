@@ -46,7 +46,7 @@ import spock.lang.Specification
  * 
  * This test validates the authentication requirements and demonstrates the proper approach.
  */
-class MavenOciLifecycleWithAuthTest extends Specification {
+class MavenOciLifecycleWithAuthIntegrationTest extends Specification {
 
     // Test demonstrates Bearer token authentication requirements
     static int REGISTRY_PORT = 5000

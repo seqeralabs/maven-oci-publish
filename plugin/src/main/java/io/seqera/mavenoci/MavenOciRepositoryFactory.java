@@ -22,19 +22,56 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 /**
  * Factory for creating Maven repositories that can resolve artifacts from OCI registries.
- * This creates a hybrid approach where artifacts are pulled from OCI on-demand and
- * cached in a local Maven repository structure.
+ * 
+ * <p>This factory creates a hybrid approach where:</p>
+ * <ul>
+ *   <li>Artifacts are pulled from OCI registries on-demand using the ORAS protocol</li>
+ *   <li>Downloaded artifacts are cached locally in standard Maven repository structure</li>
+ *   <li>The cache persists across builds for performance</li>
+ *   <li>Integration is transparent to Gradle's dependency resolution system</li>
+ * </ul>
+ * 
+ * <h3>How it works</h3>
+ * <p>When a dependency resolution occurs:</p>
+ * <ol>
+ *   <li>Gradle hooks trigger before dependency resolution</li>
+ *   <li>Each dependency is checked against the local cache</li>
+ *   <li>If missing, the factory attempts to resolve from the OCI registry</li>
+ *   <li>Maven coordinates are mapped to OCI references (e.g., {@code com.example:artifact:1.0} → {@code registry.com/com-example/artifact:1.0})</li>
+ *   <li>ORAS Java SDK pulls the artifact from the OCI registry</li>
+ *   <li>Files are organized in proper Maven directory structure in the cache</li>
+ *   <li>Gradle continues normal resolution using the cached files</li>
+ * </ol>
+ * 
+ * <h3>Cache Location</h3>
+ * <p>Artifacts are cached in {@code PROJECT_ROOT/.gradle/oci-cache/REPOSITORY_NAME/} which:</p>
+ * <ul>
+ *   <li>Survives {@code gradle clean} operations</li>
+ *   <li>Follows standard Maven repository layout: {@code groupId/artifactId/version/}</li>
+ *   <li>Contains JAR, POM, sources, and javadoc files as appropriate</li>
+ * </ul>
+ * 
+ * <h3>Error Handling</h3>
+ * <p>The factory is designed to fail gracefully:</p>
+ * <ul>
+ *   <li>If an artifact doesn't exist in OCI, resolution continues with other repositories</li>
+ *   <li>Network failures are logged but don't break the build</li>
+ *   <li>Invalid OCI registries fall back to standard Maven resolution</li>
+ * </ul>
+ * 
+ * @see MavenOciResolver
+ * @see MavenOciGroupSanitizer
+ * @since 1.0
  */
-public class OciMavenRepositoryFactory {
+public class MavenOciRepositoryFactory {
     
-    private static final Logger logger = Logging.getLogger(OciMavenRepositoryFactory.class);
+    private static final Logger logger = Logging.getLogger(MavenOciRepositoryFactory.class);
     
     /**
      * Creates a Maven repository that resolves artifacts from an OCI registry.
@@ -43,9 +80,9 @@ public class OciMavenRepositoryFactory {
      * @param repository Maven repository to configure
      * @param project Gradle project
      */
-    public static void createOciMavenRepository(OciRepositorySpec spec, MavenArtifactRepository repository, Project project) {
+    public static void createOciMavenRepository(MavenOciRepositorySpec spec, MavenArtifactRepository repository, Project project) {
         try {
-            logger.info("Creating OCI-backed Maven repository: {}", spec.getName());
+            logger.debug("Creating OCI-backed Maven repository: {}", spec.getName());
             
             String registryUrl = spec.getUrl().getOrElse("").toString();
             boolean insecure = spec.getInsecure().getOrElse(false);
@@ -59,13 +96,12 @@ public class OciMavenRepositoryFactory {
             
             if (insecure) {
                 repository.setAllowInsecureProtocol(true);
-                logger.debug("Enabled insecure protocol for OCI repository: {}", spec.getName());
             }
             
             // Install a simple resolution hook that silently handles missing artifacts
             installSilentOciResolutionHook(project, spec, cacheDir);
             
-            logger.info("Configured OCI-backed repository: {} -> cache at {}", spec.getName(), cacheDir);
+            logger.debug("Configured OCI-backed repository: {} -> cache at {}", spec.getName(), cacheDir);
             
         } catch (Exception e) {
             logger.error("Failed to create OCI-backed Maven repository", e);
@@ -80,14 +116,13 @@ public class OciMavenRepositoryFactory {
      * @param project Gradle project
      * @return Path to cache directory
      */
-    private static Path createCacheDirectory(OciRepositorySpec spec, Project project) throws IOException {
+    private static Path createCacheDirectory(MavenOciRepositorySpec spec, Project project) throws IOException {
         // Create cache directory in the project's .gradle directory (not affected by clean task)
         Path projectDir = project.getRootDir().toPath();
         Path ociCacheDir = projectDir.resolve(".gradle").resolve("oci-cache").resolve(spec.getName());
         
         Files.createDirectories(ociCacheDir);
         
-        logger.debug("Created OCI cache directory: {}", ociCacheDir);
         return ociCacheDir;
     }
     
@@ -109,7 +144,7 @@ public class OciMavenRepositoryFactory {
             String resolverKey = repositoryName + "_oci_resolver";
             String cacheKey = repositoryName + "_oci_cache";
             
-            OciMavenResolver resolver = (OciMavenResolver) project.getExtensions()
+            MavenOciResolver resolver = (MavenOciResolver) project.getExtensions()
                 .getExtraProperties().get(resolverKey);
             Path cacheDir = (Path) project.getExtensions()
                 .getExtraProperties().get(cacheKey);
@@ -133,7 +168,7 @@ public class OciMavenRepositoryFactory {
             }
             
             // Resolve artifacts from OCI registry
-            logger.info("Resolving {}:{}:{} from OCI registry", groupId, artifactId, version);
+            logger.debug("Resolving {}:{}:{} from OCI registry", groupId, artifactId, version);
             
             // Create temporary directory for OCI pull
             Path tempDir = Files.createTempDirectory("oci-resolve-");
@@ -150,14 +185,14 @@ public class OciMavenRepositoryFactory {
                     // Ensure POM file exists - create minimal POM if not downloaded
                     Path pomFile = artifactDir.resolve(artifactId + "-" + version + ".pom");
                     if (!Files.exists(pomFile)) {
-                        logger.info("POM not found in OCI artifacts, generating minimal POM");
+                        logger.debug("POM not found in OCI artifacts, generating minimal POM");
                         createMinimalPom(artifactDir, groupId, artifactId, version);
                     }
                     
-                    logger.info("Successfully cached artifacts: {}:{}:{}", groupId, artifactId, version);
+                    logger.debug("Successfully cached artifacts: {}:{}:{}", groupId, artifactId, version);
                     return true;
                 } else {
-                    logger.warn("Failed to resolve artifacts from OCI: {}:{}:{}", groupId, artifactId, version);
+                    logger.debug("Failed to resolve artifacts from OCI: {}:{}:{}", groupId, artifactId, version);
                     return false;
                 }
                 
@@ -254,20 +289,20 @@ public class OciMavenRepositoryFactory {
         Path pomFile = artifactDir.resolve(artifactId + "-" + version + ".pom");
         Files.write(pomFile, pomContent.getBytes());
         
-        logger.info("Created minimal POM file: {}", pomFile);
+        logger.debug("Created minimal POM file: {}", pomFile);
     }
     
     /**
      * Installs an artifact interceptor that attempts to resolve missing artifacts from OCI.
      * This hooks into the dependency resolution chain directly.
      */
-    private static void installSilentOciResolutionHook(Project project, OciRepositorySpec spec, Path cacheDir) {
+    private static void installSilentOciResolutionHook(Project project, MavenOciRepositorySpec spec, Path cacheDir) {
         logger.debug("Installing OCI resolution interceptor for repository: {}", spec.getName());
         
         String registryUrl = spec.getUrl().getOrElse("").toString();
         boolean insecure = spec.getInsecure().getOrElse(false);
         
-        OciMavenResolver resolver = new OciMavenResolver(registryUrl, insecure, null, null);
+        MavenOciResolver resolver = new MavenOciResolver(registryUrl, insecure, null, null);
         
         // Hook into all configurations to intercept dependency resolution
         project.getConfigurations().configureEach(configuration -> {
@@ -295,9 +330,9 @@ public class OciMavenRepositoryFactory {
     /**
      * Ensures an artifact is available in the cache, downloading from OCI if needed.
      */
-    private static void ensureArtifactInCache(OciMavenResolver resolver, Path cacheDir, 
-                                            String groupId, String artifactId, String version, 
-                                            String repositoryName) {
+    private static void ensureArtifactInCache(MavenOciResolver resolver, Path cacheDir,
+                                              String groupId, String artifactId, String version,
+                                              String repositoryName) {
         try {
             // Check if artifacts already exist in cache
             String groupPath = groupId.replace(".", "/");
@@ -310,7 +345,7 @@ public class OciMavenRepositoryFactory {
                 return;
             }
             
-            logger.info("Attempting to resolve {}:{}:{} from OCI registry: {}", groupId, artifactId, version, repositoryName);
+            logger.debug("Attempting to resolve {}:{}:{} from OCI registry: {}", groupId, artifactId, version, repositoryName);
             
             try {
                 // Create temp directory for OCI pull
@@ -329,7 +364,7 @@ public class OciMavenRepositoryFactory {
                             createMinimalPom(artifactDir, groupId, artifactId, version);
                         }
                         
-                        logger.info("✅ Successfully resolved {}:{}:{} from OCI registry to cache", groupId, artifactId, version);
+                        logger.info("Successfully resolved {}:{}:{} from OCI registry to cache", groupId, artifactId, version);
                     } else {
                         logger.debug("Artifact not found in OCI registry: {}:{}:{} (will try other repositories)", groupId, artifactId, version);
                     }
