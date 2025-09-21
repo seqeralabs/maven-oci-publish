@@ -32,7 +32,7 @@ import org.gradle.api.provider.Property;
  * such as Docker Hub, GitHub Container Registry, AWS ECR, and others. It defines where
  * artifacts should be published within the {@code oci} DSL block.</p>
  * 
- * <h3>Usage</h3>
+ * <h2>Usage</h2>
  * <p>Repositories are configured within the {@code oci} DSL block:</p>
  * <pre>{@code
  * oci {
@@ -54,7 +54,7 @@ import org.gradle.api.provider.Property;
  * }
  * }</pre>
  * 
- * <h3>Configuration Options</h3>
+ * <h2>Configuration Options</h2>
  * <ul>
  *   <li>{@code url} - OCI registry URL (required)</li>
  *   <li>{@code namespace} - Optional namespace/organization within the registry</li>
@@ -63,11 +63,11 @@ import org.gradle.api.provider.Property;
  *   <li>{@code overwritePolicy} - Policy for handling existing packages (default: fail)</li>
  * </ul>
  * 
- * <h3>Namespace Behavior</h3>
+ * <h2>Namespace Behavior</h2>
  * <p>When a namespace is specified, the final OCI reference becomes:</p>
  * <pre>registry.com/namespace/sanitized-groupId/artifactId:version</pre>
  * 
- * @see MavenOciPublication
+ * @see MavenOciPublishPlugin
  * @since 1.0
  */
 public class MavenOciRepository implements Named {

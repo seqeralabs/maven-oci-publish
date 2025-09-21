@@ -26,13 +26,13 @@ import java.net.URISyntaxException;
  * separating the registry host from the namespace path. This is crucial for proper OCI reference
  * construction when publishing or resolving Maven artifacts.</p>
  * 
- * <h3>URI Structure</h3>
+ * <h2>URI Structure</h2>
  * <p>OCI registry URIs follow this general structure:</p>
  * <pre>
  * [scheme://]host[:port][/namespace[/sub-namespace[...]]]
  * </pre>
  * 
- * <h3>Parsing Examples</h3>
+ * <h2>Parsing Examples</h2>
  * <ul>
  *   <li>{@code https://registry-1.docker.io} → host: {@code registry-1.docker.io}, namespace: {@code ""}</li>
  *   <li>{@code https://registry.com:5000/maven} → host: {@code registry.com:5000}, namespace: {@code "maven"}</li>
@@ -40,7 +40,7 @@ import java.net.URISyntaxException;
  *   <li>{@code ghcr.io/myorg/maven} → host: {@code ghcr.io}, namespace: {@code "myorg/maven"}</li>
  * </ul>
  * 
- * <h3>Usage in OCI References</h3>
+ * <h2>Usage in OCI References</h2>
  * <p>The parsed components are used to construct OCI references for Maven artifacts:</p>
  * <pre>
  * Registry Host: registry.com:5000
@@ -49,7 +49,7 @@ import java.net.URISyntaxException;
  * Final OCI Ref: registry.com:5000/maven/snapshots/com-example/my-lib:1.0.0
  * </pre>
  * 
- * <h3>Error Handling</h3>
+ * <h2>Error Handling</h2>
  * <p>The parser validates URI format and throws {@link IllegalArgumentException} for:</p>
  * <ul>
  *   <li>Null or empty URIs</li>

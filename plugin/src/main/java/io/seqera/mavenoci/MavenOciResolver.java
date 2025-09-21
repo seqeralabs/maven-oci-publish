@@ -37,7 +37,7 @@ import java.nio.file.Path;
  *   <li>Registry connectivity and error handling</li>
  * </ul>
  * 
- * <h3>Maven to OCI Coordinate Mapping</h3>
+ * <h2>Maven to OCI Coordinate Mapping</h2>
  * <p>Maven coordinates are mapped to OCI references using the following pattern:</p>
  * <pre>
  * Maven: {@code groupId:artifactId:version}
@@ -50,7 +50,7 @@ import java.nio.file.Path;
  *   <li>{@code org.springframework:spring-core:5.3.21} → {@code registry.com/org-springframework/spring-core:5.3.21}</li>
  * </ul>
  * 
- * <h3>Registry Configuration</h3>
+ * <h2>Registry Configuration</h2>
  * <p>The resolver supports:</p>
  * <ul>
  *   <li><strong>Secure registries</strong>: HTTPS with optional authentication</li>
@@ -59,7 +59,7 @@ import java.nio.file.Path;
  *   <li><strong>Authenticated access</strong>: Username/password or token-based auth</li>
  * </ul>
  * 
- * <h3>Error Handling</h3>
+ * <h2>Error Handling</h2>
  * <p>The resolver is designed to be resilient:</p>
  * <ul>
  *   <li>Network timeouts and connectivity issues are caught and logged</li>
@@ -68,7 +68,7 @@ import java.nio.file.Path;
  *   <li>Invalid registry URLs are detected early</li>
  * </ul>
  * 
- * <h3>Performance Considerations</h3>
+ * <h2>Performance Considerations</h2>
  * <p>For optimal performance:</p>
  * <ul>
  *   <li>Registry instances are reused when possible</li>

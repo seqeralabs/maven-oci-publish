@@ -22,14 +22,14 @@ package io.seqera.mavenoci;
  * <p>This enum defines the behavior when attempting to publish an artifact
  * that already exists in the target OCI registry.</p>
  * 
- * <h3>Policy Options</h3>
+ * <h2>Policy Options</h2>
  * <ul>
  *   <li>{@link #FAIL} - Fail the build if the package already exists (default)</li>
  *   <li>{@link #OVERRIDE} - Replace the existing package with the new one</li>
  *   <li>{@link #SKIP} - Skip publishing if the package already exists</li>
  * </ul>
  * 
- * <h3>Usage</h3>
+ * <h2>Usage</h2>
  * <pre>{@code
  * oci('myRepo') {
  *     url = 'https://registry.com'

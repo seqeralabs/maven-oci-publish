@@ -37,7 +37,7 @@ import org.gradle.api.logging.Logging;
  *   <li>Integration is transparent to Gradle's dependency resolution system</li>
  * </ul>
  * 
- * <h3>How it works</h3>
+ * <h2>How it works</h2>
  * <p>When a dependency resolution occurs:</p>
  * <ol>
  *   <li>Gradle hooks trigger before dependency resolution</li>
@@ -49,7 +49,7 @@ import org.gradle.api.logging.Logging;
  *   <li>Gradle continues normal resolution using the cached files</li>
  * </ol>
  * 
- * <h3>Cache Location</h3>
+ * <h2>Cache Location</h2>
  * <p>Artifacts are cached in {@code PROJECT_ROOT/.gradle/oci-cache/REPOSITORY_NAME/} which:</p>
  * <ul>
  *   <li>Survives {@code gradle clean} operations</li>
@@ -57,7 +57,7 @@ import org.gradle.api.logging.Logging;
  *   <li>Contains JAR, POM, sources, and javadoc files as appropriate</li>
  * </ul>
  * 
- * <h3>Error Handling</h3>
+ * <h2>Error Handling</h2>
  * <p>The factory is designed to fail gracefully:</p>
  * <ul>
  *   <li>If an artifact doesn't exist in OCI, resolution continues with other repositories</li>

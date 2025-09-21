@@ -35,7 +35,7 @@ import org.gradle.util.GradleVersion;
  * registries as publishing destinations. It uses the ORAS (OCI Registry as Storage) protocol to store Maven 
  * artifacts as OCI artifacts.</p>
  * 
- * <h3>Features</h3>
+ * <h2>Features</h2>
  * <ul>
  *   <li><strong>Standard Integration</strong>: Uses Gradle's standard {@code publishing.repositories} DSL</li>
  *   <li><strong>OCI Registry Support</strong>: Publish to any OCI-compliant registry</li>
@@ -43,7 +43,7 @@ import org.gradle.util.GradleVersion;
  *   <li><strong>Authentication</strong>: Support for registry authentication</li>
  * </ul>
  * 
- * <h3>Publishing Configuration</h3>
+ * <h2>Publishing Configuration</h2>
  * <p>Configure OCI publishing using the standard publishing DSL:</p>
  * <pre>{@code
  * publishing {
@@ -71,14 +71,14 @@ import org.gradle.util.GradleVersion;
  * }
  * }</pre>
  * 
- * <h3>Plugin Tasks</h3>
+ * <h2>Plugin Tasks</h2>
  * <p>The plugin creates the following tasks:</p>
  * <ul>
  *   <li>{@code publishToOciRegistries} - Publishes all publications to all OCI repositories</li>
  *   <li>{@code publish<Publication>To<Repository>Repository} - Publishes specific publication to specific repository</li>
  * </ul>
  * 
- * <h3>Requirements</h3>
+ * <h2>Requirements</h2>
  * <ul>
  *   <li>Gradle 6.0 or later</li>
  *   <li>Java 17 or later</li>

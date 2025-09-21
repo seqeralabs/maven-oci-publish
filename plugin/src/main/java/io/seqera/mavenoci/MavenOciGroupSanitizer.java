@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
  * repository naming requirements. OCI registries have stricter naming rules than Maven, requiring
  * lowercase names with limited special characters.</p>
  * 
- * <h3>Sanitization Rules</h3>
+ * <h2>Sanitization Rules</h2>
  * <p>The sanitization process applies the following transformations:</p>
  * <ol>
  *   <li><strong>Case normalization</strong>: Convert to lowercase</li>
@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
  *   <li><strong>Safety prefix</strong>: Add "g" prefix if result starts with hyphen or underscore</li>
  * </ol>
  * 
- * <h3>Examples</h3>
+ * <h2>Examples</h2>
  * <pre>
  * Original              | Sanitized
  * ----------------------|------------------
@@ -49,7 +49,7 @@ import java.util.regex.Pattern;
  * _private.group        | private-group
  * </pre>
  * 
- * <h3>Validation</h3>
+ * <h2>Validation</h2>
  * <p>The class also provides validation methods to check if a string conforms to
  * OCI registry naming rules:</p>
  * <ul>
@@ -59,12 +59,12 @@ import java.util.regex.Pattern;
  *   <li>Cannot be empty</li>
  * </ul>
  * 
- * <h3>Reverse Mapping</h3>
+ * <h2>Reverse Mapping</h2>
  * <p>The class provides a best-effort reverse mapping from sanitized names back to
  * Maven group IDs. Note that this is not always perfect due to information loss
  * during sanitization (e.g., case information, removed characters).</p>
  * 
- * <h3>Thread Safety</h3>
+ * <h2>Thread Safety</h2>
  * <p>All methods in this class are static and thread-safe.</p>
  * 
  * @see MavenOciResolver

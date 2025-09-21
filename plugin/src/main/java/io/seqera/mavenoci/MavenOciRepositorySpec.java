@@ -31,7 +31,7 @@ import java.util.Optional;
  * for dependency resolution. It's used when configuring OCI repositories in the {@code repositories}
  * block for consuming Maven artifacts from OCI registries.</p>
  * 
- * <h3>Usage</h3>
+ * <h2>Usage</h2>
  * <p>OCI repositories are configured using the {@code oci("name")} factory method:</p>
  * <pre>{@code
  * repositories {
@@ -48,7 +48,7 @@ import java.util.Optional;
  * }
  * }</pre>
  * 
- * <h3>URL Structure</h3>
+ * <h2>URL Structure</h2>
  * <p>The URL can include a namespace path component which will be used to locate artifacts:</p>
  * <ul>
  *   <li>{@code https://registry.com} - Base registry</li>
@@ -56,7 +56,7 @@ import java.util.Optional;
  *   <li>{@code https://registry.com/org/maven} - Registry with "org/maven" nested namespace</li>
  * </ul>
  * 
- * <h3>Dependency Resolution</h3>
+ * <h2>Dependency Resolution</h2>
  * <p>When Gradle resolves a dependency like {@code com.example:my-lib:1.0.0}, this repository
  * will attempt to find the artifact at the OCI reference:</p>
  * <pre>registry.com/[namespace/]com-example/my-lib:1.0.0</pre>
