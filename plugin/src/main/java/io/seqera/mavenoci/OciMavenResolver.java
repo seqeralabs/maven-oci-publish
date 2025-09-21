@@ -81,30 +81,12 @@ public class OciMavenResolver {
             
             logger.info("Successfully pulled artifacts from OCI registry");
             
-            // Verify that we got the expected Maven artifacts
-            boolean hasJar = Files.exists(targetDir.resolve(artifactId + "-" + version + ".jar"));
-            boolean hasPom = Files.exists(targetDir.resolve(artifactId + "-" + version + ".pom"));
-            
-            if (!hasJar && !hasPom) {
-                logger.warn("No standard Maven artifacts found after OCI pull");
-                // Try to find any files that were downloaded
-                if (Files.exists(targetDir)) {
-                    try {
-                        Files.walk(targetDir, 1)
-                            .filter(Files::isRegularFile)
-                            .forEach(file -> logger.debug("Found file: {}", file.getFileName()));
-                    } catch (IOException e) {
-                        logger.debug("Error listing downloaded files", e);
-                    }
-                }
-                return false;
-            }
-            
-            logger.info("Successfully resolved Maven artifacts - JAR: {}, POM: {}", hasJar, hasPom);
+            // Just return true - file mapping is handled by OciMavenRepositoryFactory.moveArtifactFiles()
+            logger.info("Successfully resolved Maven artifacts from OCI registry");
             return true;
             
         } catch (Exception e) {
-            logger.error("Failed to resolve Maven artifacts from OCI registry: {}", e.getMessage(), e);
+            logger.debug("Failed to resolve Maven artifacts from OCI registry: {}", e.getMessage(), e);
             return false;
         }
     }

@@ -63,9 +63,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
         project.getPluginManager().apply("maven-publish");
         
         // Note: OCI repository configuration is now handled directly through oci { ... } syntax
-        
-        // Install dependency resolution interceptor
-        OciDependencyResolutionInterceptor.install(project);
+        // OCI repositories work as normal Maven repositories in the repository chain
         
         // Create tasks after project evaluation
         project.afterEvaluate(p -> createPublishingTasks(p, extension));
@@ -188,6 +186,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                 .collect(Collectors.toList());
         }));
     }
+    
     
     
     private String capitalize(String str) {

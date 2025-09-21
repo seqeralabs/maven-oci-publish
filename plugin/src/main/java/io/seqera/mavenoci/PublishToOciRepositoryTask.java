@@ -119,14 +119,18 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
         logger.info("Publishing to OCI registry: {}", getRegistryUrl().get());
         
         // Debug logging for task configuration
-        logger.debug("Task configuration:");
-        logger.debug("  Registry URL: {}", getRegistryUrl().getOrElse("not set"));
-        logger.debug("  Group ID: {}", getGroupId().getOrElse("not set"));
-        logger.debug("  Artifact ID: {}", getArtifactId().getOrElse("not set"));
-        logger.debug("  Version: {}", getVersion().getOrElse("not set"));
-        logger.debug("  Repository: {}", getRepository().getOrElse("not set"));
-        logger.debug("  Tag: {}", getTag().getOrElse("not set"));
-        logger.debug("  Artifact files: {}", getArtifacts().getFiles());
+        logger.info("Task configuration:");
+        logger.info("  Registry URL: {}", getRegistryUrl().getOrElse("not set"));
+        logger.info("  Group ID: {}", getGroupId().getOrElse("not set"));
+        logger.info("  Artifact ID: {}", getArtifactId().getOrElse("not set"));
+        logger.info("  Version: {}", getVersion().getOrElse("not set"));
+        logger.info("  Repository: {}", getRepository().getOrElse("not set"));
+        logger.info("  Tag: {}", getTag().getOrElse("not set"));
+        logger.info("  Namespace: {}", getNamespace().getOrElse("not set"));
+        logger.info("  Username: {}", getUsername().getOrElse("not set"));
+        logger.info("  Has password: {}", getPassword().isPresent());
+        logger.info("  Insecure mode: {}", getInsecure().getOrElse(false));
+        logger.info("  Artifact files: {}", getArtifacts().getFiles());
         
         try {
             // Check for artifacts first, before creating registry client
@@ -167,11 +171,15 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
             
             // Build OCI reference using new coordinate mapping
             String containerRef = buildOciReference();
+            logger.info("Built OCI reference: {}", containerRef);
+            
             ContainerRef ref = ContainerRef.parse(containerRef);
             
             logger.info("Publishing {} artifacts to {}", artifactPaths.size(), containerRef);
-            logger.debug("Maven coordinates: {}:{}:{}", getGroupId().getOrElse("unknown"), 
+            logger.info("Maven coordinates: {}:{}:{}", getGroupId().getOrElse("unknown"), 
                        getArtifactId().getOrElse("unknown"), getVersion().getOrElse("unknown"));
+            logger.info("ContainerRef parsed - registry: {}, repository: {}, tag: {}", 
+                       ref.getRegistry(), ref.getRepository(), ref.getTag());
             
             // Push artifacts to registry using varargs
             Manifest manifest = registry.pushArtifact(
@@ -220,21 +228,29 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
         // Add registry host (without protocol)
         String registryUrl = getRegistryUrl().get();
         String host = registryUrl.replaceFirst("^https?://", "");
+        logger.info("Registry host: {}", host);
         ref.append(host);
         
         // Add namespace
         if (getNamespace().isPresent()) {
+            logger.info("Adding namespace: {}", getNamespace().get());
             ref.append("/").append(getNamespace().get());
+        } else {
+            logger.info("No namespace provided");
         }
         
         // Add sanitized group
         String sanitizedGroup = MavenGroupSanitizer.sanitize(groupId);
+        logger.info("Sanitized group: {}", sanitizedGroup);
         ref.append("/").append(sanitizedGroup);
         
         // Add artifact and version
+        logger.info("Artifact: {}, Version: {}", artifactId, version);
         ref.append("/").append(artifactId).append(":").append(version);
         
-        return ref.toString();
+        String result = ref.toString();
+        logger.info("Built OCI reference with namespace: {}", result);
+        return result;
     }
     
     private String determineMediaType(String filename) {

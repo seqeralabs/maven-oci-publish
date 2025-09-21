@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 /**
  * Factory for creating Maven repositories that can resolve artifacts from OCI registries.
@@ -46,32 +47,25 @@ public class OciMavenRepositoryFactory {
         try {
             logger.info("Creating OCI-backed Maven repository: {}", spec.getName());
             
-            // Create a persistent cache directory for this OCI repository
-            Path cacheDir = createCacheDirectory(spec, project);
-            
-            // Configure the Maven repository to use the cache directory
-            repository.setName(spec.getName() + "_oci_cache");
-            repository.setUrl(cacheDir.toUri());
-            
-            // Create OCI resolver for on-demand artifact retrieval
             String registryUrl = spec.getUrl().getOrElse("").toString();
             boolean insecure = spec.getInsecure().getOrElse(false);
             
-            // Get credentials if available
-            String username = null;
-            String password = null;
-            if (spec.getCredentials().isPresent()) {
-                // For simplicity, assume string credentials (would need proper credential handling in real implementation)
-                logger.debug("Credentials are configured for OCI repository");
+            // Create cache directory for this OCI repository
+            Path cacheDir = createCacheDirectory(spec, project);
+            
+            // Configure repository to use cache directory as its URL
+            repository.setName(spec.getName());
+            repository.setUrl(cacheDir.toUri());
+            
+            if (insecure) {
+                repository.setAllowInsecureProtocol(true);
+                logger.debug("Enabled insecure protocol for OCI repository: {}", spec.getName());
             }
             
-            OciMavenResolver resolver = new OciMavenResolver(registryUrl, insecure, username, password);
+            // Install a simple resolution hook that silently handles missing artifacts
+            installSilentOciResolutionHook(project, spec, cacheDir);
             
-            // Store resolver reference for potential use by dependency resolution hooks
-            project.getExtensions().getExtraProperties().set(spec.getName() + "_oci_resolver", resolver);
-            project.getExtensions().getExtraProperties().set(spec.getName() + "_oci_cache", cacheDir);
-            
-            logger.info("OCI-backed Maven repository created: {} -> {}", spec.getName(), cacheDir);
+            logger.info("Configured OCI-backed repository: {} -> cache at {}", spec.getName(), cacheDir);
             
         } catch (Exception e) {
             logger.error("Failed to create OCI-backed Maven repository", e);
@@ -87,9 +81,9 @@ public class OciMavenRepositoryFactory {
      * @return Path to cache directory
      */
     private static Path createCacheDirectory(OciRepositorySpec spec, Project project) throws IOException {
-        // Create cache directory in the project's build directory
-        Path buildDir = project.getBuildDir().toPath();
-        Path ociCacheDir = buildDir.resolve("oci-cache").resolve(spec.getName());
+        // Create cache directory in the project's .gradle directory (not affected by clean task)
+        Path projectDir = project.getRootDir().toPath();
+        Path ociCacheDir = projectDir.resolve(".gradle").resolve("oci-cache").resolve(spec.getName());
         
         Files.createDirectories(ociCacheDir);
         
@@ -204,21 +198,23 @@ public class OciMavenRepositoryFactory {
                     String fileName = file.getFileName().toString();
                     Path targetFile;
                     
-                    // Determine target file name based on file extension and content
-                    if (fileName.endsWith(".jar")) {
+                    // Determine target file name based on file content and extension
+                    // Check for specific JAR types first before general .jar check
+                    if (fileName.contains("sources") && fileName.endsWith(".jar")) {
+                        targetFile = artifactDir.resolve(artifactId + "-" + version + "-sources.jar");
+                    } else if (fileName.contains("javadoc") && fileName.endsWith(".jar")) {
+                        targetFile = artifactDir.resolve(artifactId + "-" + version + "-javadoc.jar");
+                    } else if (fileName.endsWith(".jar")) {
                         targetFile = artifactDir.resolve(artifactId + "-" + version + ".jar");
                     } else if (fileName.endsWith(".pom") || fileName.endsWith(".xml")) {
                         targetFile = artifactDir.resolve(artifactId + "-" + version + ".pom");
-                    } else if (fileName.contains("sources")) {
-                        targetFile = artifactDir.resolve(artifactId + "-" + version + "-sources.jar");
-                    } else if (fileName.contains("javadoc")) {
-                        targetFile = artifactDir.resolve(artifactId + "-" + version + "-javadoc.jar");
                     } else {
                         // Keep original name for unknown file types
                         targetFile = artifactDir.resolve(fileName);
                     }
                     
-                    Files.move(file, targetFile);
+                    // Move file, replacing if exists
+                    Files.move(file, targetFile, StandardCopyOption.REPLACE_EXISTING);
                     logger.debug("Moved artifact file: {} -> {}", fileName, targetFile.getFileName());
                     
                 } catch (IOException e) {
@@ -260,4 +256,109 @@ public class OciMavenRepositoryFactory {
         
         logger.info("Created minimal POM file: {}", pomFile);
     }
+    
+    /**
+     * Installs an artifact interceptor that attempts to resolve missing artifacts from OCI.
+     * This hooks into the dependency resolution chain directly.
+     */
+    private static void installSilentOciResolutionHook(Project project, OciRepositorySpec spec, Path cacheDir) {
+        logger.debug("Installing OCI resolution interceptor for repository: {}", spec.getName());
+        
+        String registryUrl = spec.getUrl().getOrElse("").toString();
+        boolean insecure = spec.getInsecure().getOrElse(false);
+        
+        OciMavenResolver resolver = new OciMavenResolver(registryUrl, insecure, null, null);
+        
+        // Hook into all configurations to intercept dependency resolution
+        project.getConfigurations().configureEach(configuration -> {
+            if (configuration.isCanBeResolved()) {
+                configuration.getIncoming().beforeResolve(resolvableConfiguration -> {
+                    logger.debug("OCI resolution hook triggered for configuration: {}", configuration.getName());
+                    
+                    // Try to pre-resolve OCI artifacts before normal resolution
+                    configuration.getAllDependencies().forEach(dependency -> {
+                        String group = dependency.getGroup();
+                        String name = dependency.getName();
+                        String version = dependency.getVersion();
+                        
+                        if (group != null && name != null && version != null) {
+                            // Try to resolve from OCI and cache it
+                            ensureArtifactInCache(resolver, cacheDir, group, name, version, spec.getName());
+                        }
+                    });
+                });
+            }
+        });
+    }
+    
+    
+    /**
+     * Ensures an artifact is available in the cache, downloading from OCI if needed.
+     */
+    private static void ensureArtifactInCache(OciMavenResolver resolver, Path cacheDir, 
+                                            String groupId, String artifactId, String version, 
+                                            String repositoryName) {
+        try {
+            // Check if artifacts already exist in cache
+            String groupPath = groupId.replace(".", "/");
+            Path artifactDir = cacheDir.resolve(groupPath).resolve(artifactId).resolve(version);
+            Path jarFile = artifactDir.resolve(artifactId + "-" + version + ".jar");
+            Path pomFile = artifactDir.resolve(artifactId + "-" + version + ".pom");
+            
+            if (Files.exists(jarFile) && Files.exists(pomFile)) {
+                logger.debug("Artifacts already cached: {}:{}:{}", groupId, artifactId, version);
+                return;
+            }
+            
+            logger.info("Attempting to resolve {}:{}:{} from OCI registry: {}", groupId, artifactId, version, repositoryName);
+            
+            try {
+                // Create temp directory for OCI pull
+                Path tempDir = Files.createTempDirectory("oci-resolve-");
+                try {
+                    boolean resolved = resolver.resolveArtifacts(groupId, artifactId, version, tempDir);
+                    
+                    if (resolved) {
+                        // Move artifacts from temp directory to cache with proper Maven names
+                        Files.createDirectories(artifactDir);
+                        moveArtifactFiles(tempDir, artifactDir, artifactId, version);
+                        
+                        // Ensure POM file exists
+                        if (!Files.exists(pomFile)) {
+                            logger.debug("POM not found in OCI artifacts, generating minimal POM");
+                            createMinimalPom(artifactDir, groupId, artifactId, version);
+                        }
+                        
+                        logger.info("✅ Successfully resolved {}:{}:{} from OCI registry to cache", groupId, artifactId, version);
+                    } else {
+                        logger.debug("Artifact not found in OCI registry: {}:{}:{} (will try other repositories)", groupId, artifactId, version);
+                    }
+                } finally {
+                    // Clean up temp directory
+                    try {
+                        Files.walk(tempDir)
+                            .sorted((a, b) -> b.compareTo(a)) // Delete files before directories
+                            .forEach(path -> {
+                                try {
+                                    Files.delete(path);
+                                } catch (IOException e) {
+                                    logger.debug("Failed to delete temp file: {}", path, e);
+                                }
+                            });
+                    } catch (IOException e) {
+                        logger.debug("Failed to clean up temp directory", e);
+                    }
+                }
+                
+            } catch (Exception e) {
+                // Silently ignore all OCI resolution errors - this allows the normal repository chain to continue
+                logger.debug("OCI resolution failed for {}:{}:{} (continuing with normal resolution): {}", 
+                           groupId, artifactId, version, e.getMessage());
+            }
+            
+        } catch (Exception e) {
+            logger.debug("Error ensuring artifact in cache: {}:{}:{}", groupId, artifactId, version, e);
+        }
+    }
+    
 }
