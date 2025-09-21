@@ -85,7 +85,7 @@ import org.gradle.util.GradleVersion;
  *   <li>Network access to OCI registries</li>
  * </ul>
  * 
- * @see OciMavenRepository
+ * @see MavenOciArtifactRepository
  * @since 1.0
  */
 public class MavenOciPublishPlugin implements Plugin<Project> {
@@ -104,7 +104,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
         logger.debug("Applying Maven OCI plugin to project: {}", project.getName());
         
         // Store OCI repositories for separate processing before maven-publish sees them
-        java.util.List<OciMavenRepository> ociRepositories = new java.util.ArrayList<>();
+        java.util.List<MavenOciArtifactRepository> ociRepositories = new java.util.ArrayList<>();
         project.getExtensions().getExtraProperties().set("ociRepositoriesForProcessing", ociRepositories);
         
         // Apply the maven-publish plugin to leverage its components
@@ -141,7 +141,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
      * NOTE: Since we're not adding OCI repositories to publishing.repositories anymore,
      * this method is no longer needed - repositories are added directly to our list in oci() methods
      */
-    private void interceptOciRepositories(PublishingExtension publishing, Project project, java.util.List<OciMavenRepository> ociRepositories) {
+    private void interceptOciRepositories(PublishingExtension publishing, Project project, java.util.List<MavenOciArtifactRepository> ociRepositories) {
         // No-op since OCI repositories are now managed separately from maven-publish
         logger.debug("OCI repository interception disabled - repositories managed separately from maven-publish");
     }
@@ -236,7 +236,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                     
                     if (isPublishingRepo) {
                         // For publishing - create OciMavenRepository for publishing tasks
-                        OciMavenRepository ociRepo = project.getObjects().newInstance(OciMavenRepository.class, name);
+                        MavenOciArtifactRepository ociRepo = project.getObjects().newInstance(MavenOciArtifactRepository.class, name);
                         
                         // Configure the repository if configuration block provided
                         if (configureAction != null) {
@@ -245,8 +245,8 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                         
                         // Store in separate list for publishing task generation
                         @SuppressWarnings("unchecked")
-                        java.util.List<OciMavenRepository> ociRepositories = 
-                            (java.util.List<OciMavenRepository>) project.getExtensions().getExtraProperties().get("ociRepositoriesForProcessing");
+                        java.util.List<MavenOciArtifactRepository> ociRepositories =
+                            (java.util.List<MavenOciArtifactRepository>) project.getExtensions().getExtraProperties().get("ociRepositoriesForProcessing");
                         if (ociRepositories != null && !ociRepositories.contains(ociRepo)) {
                             ociRepositories.add(ociRepo);
                             logger.debug("Added OCI repository '{}' to publishing list", name);
@@ -346,7 +346,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                         logger.info("Creating OCI repository '{}' via methodMissing handler", repoName);
                         
                         // Create OCI Maven repository (no proxy needed since not added to maven-publish)
-                        OciMavenRepository ociRepo = project.getObjects().newInstance(OciMavenRepository.class, repoName);
+                        MavenOciArtifactRepository ociRepo = project.getObjects().newInstance(MavenOciArtifactRepository.class, repoName);
                         
                         // Configure the repository if configuration block provided
                         if (configureAction != null) {
@@ -355,8 +355,8 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                         
                         // Store in separate list to avoid maven-publish conflicts, but add back for test visibility
                         @SuppressWarnings("unchecked")
-                        java.util.List<OciMavenRepository> ociRepositories = 
-                            (java.util.List<OciMavenRepository>) project.getExtensions().getExtraProperties().get("ociRepositoriesForProcessing");
+                        java.util.List<MavenOciArtifactRepository> ociRepositories =
+                            (java.util.List<MavenOciArtifactRepository>) project.getExtensions().getExtraProperties().get("ociRepositoriesForProcessing");
                         if (ociRepositories != null && !ociRepositories.contains(ociRepo)) {
                             ociRepositories.add(ociRepo);
                             logger.debug("Added OCI repository '{}' to separate processing list", repoName);
@@ -413,15 +413,15 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             this.project = project;
         }
         
-        public OciMavenRepository call(String name) {
+        public MavenOciArtifactRepository call(String name) {
             return call(name, null);
         }
         
-        public OciMavenRepository call(String name, groovy.lang.Closure<?> configureAction) {
+        public MavenOciArtifactRepository call(String name, groovy.lang.Closure<?> configureAction) {
             logger.info("Creating OCI repository '{}' via factory", name);
             
             // Create OCI Maven repository (no proxy needed since not added to maven-publish)
-            OciMavenRepository ociRepo = project.getObjects().newInstance(OciMavenRepository.class, name);
+            MavenOciArtifactRepository ociRepo = project.getObjects().newInstance(MavenOciArtifactRepository.class, name);
             
             // Configure the repository if configuration block provided
             if (configureAction != null) {
@@ -430,8 +430,8 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             
             // Store in separate list to avoid maven-publish conflicts, but add back for test visibility
             @SuppressWarnings("unchecked")
-            java.util.List<OciMavenRepository> ociRepositories = 
-                (java.util.List<OciMavenRepository>) project.getExtensions().getExtraProperties().get("ociRepositoriesForProcessing");
+            java.util.List<MavenOciArtifactRepository> ociRepositories =
+                (java.util.List<MavenOciArtifactRepository>) project.getExtensions().getExtraProperties().get("ociRepositoriesForProcessing");
             if (ociRepositories != null && !ociRepositories.contains(ociRepo)) {
                 ociRepositories.add(ociRepo);
                 logger.debug("Added OCI repository '{}' to separate processing list", name);
@@ -456,7 +456,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
     /**
      * Closure that acts as the oci() method for repositories
      */
-    public static class OciMethodClosure extends groovy.lang.Closure<OciMavenRepository> {
+    public static class OciMethodClosure extends groovy.lang.Closure<MavenOciArtifactRepository> {
         private final org.gradle.api.artifacts.dsl.RepositoryHandler repositories;
         private final Project project;
         
@@ -466,15 +466,15 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             this.project = project;
         }
         
-        public OciMavenRepository doCall(String name) {
+        public MavenOciArtifactRepository doCall(String name) {
             return doCall(name, null);
         }
         
-        public OciMavenRepository doCall(String name, groovy.lang.Closure<?> configureAction) {
+        public MavenOciArtifactRepository doCall(String name, groovy.lang.Closure<?> configureAction) {
             logger.info("Creating OCI repository '{}' via direct method", name);
             
             // Create OCI Maven repository (no proxy needed since not added to maven-publish)
-            OciMavenRepository ociRepo = project.getObjects().newInstance(OciMavenRepository.class, name);
+            MavenOciArtifactRepository ociRepo = project.getObjects().newInstance(MavenOciArtifactRepository.class, name);
             
             // Configure the repository if configuration block provided
             if (configureAction != null) {
@@ -483,8 +483,8 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             
             // Store in separate list to avoid maven-publish conflicts, but add back for test visibility
             @SuppressWarnings("unchecked")
-            java.util.List<OciMavenRepository> ociRepositories = 
-                (java.util.List<OciMavenRepository>) project.getExtensions().getExtraProperties().get("ociRepositoriesForProcessing");
+            java.util.List<MavenOciArtifactRepository> ociRepositories =
+                (java.util.List<MavenOciArtifactRepository>) project.getExtensions().getExtraProperties().get("ociRepositoriesForProcessing");
             if (ociRepositories != null && !ociRepositories.contains(ociRepo)) {
                 ociRepositories.add(ociRepo);
                 logger.debug("Added OCI repository '{}' to separate processing list", name);
@@ -521,14 +521,14 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
     /**
      * Create publishing tasks for OCI repositories
      */
-    private void createOciPublishingTasks(Project project, java.util.List<OciMavenRepository> ociRepositories) {
+    private void createOciPublishingTasks(Project project, java.util.List<MavenOciArtifactRepository> ociRepositories) {
         PublishingExtension publishing = project.getExtensions().getByType(PublishingExtension.class);
         
         if (ociRepositories != null && !ociRepositories.isEmpty()) {
             logger.debug("Creating OCI publishing tasks for {} repositories", ociRepositories.size());
             
             // Create tasks for each OCI repository and publication combination
-            for (OciMavenRepository ociRepository : ociRepositories) {
+            for (MavenOciArtifactRepository ociRepository : ociRepositories) {
                 publishing.getPublications().withType(MavenPublication.class).all(publication -> {
                     createOciPublishTask(project, publication, ociRepository);
                 });
@@ -541,7 +541,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
     /**
      * Create a publishing task for a specific publication-repository combination
      */
-    private void createOciPublishTask(Project project, MavenPublication publication, OciMavenRepository repository) {
+    private void createOciPublishTask(Project project, MavenPublication publication, MavenOciArtifactRepository repository) {
         String taskName = "publish" + capitalize(publication.getName()) + "PublicationTo" + capitalize(repository.getName()) + "Repository";
         
         // Check if task already exists (prevent duplicate registration in tests)

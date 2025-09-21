@@ -76,10 +76,10 @@ class OciMavenRepositoryIntegrationTest extends Specification {
         
         and: "OCI repository should be of correct type"
         def ociRepo = publishing.repositories.findByName('dockerRegistry')
-        ociRepo instanceof OciMavenRepository
+        ociRepo instanceof MavenOciArtifactRepository
         
         and: "OCI repository should have correct configuration"
-        def ociMavenRepo = (OciMavenRepository) ociRepo
+        def ociMavenRepo = (MavenOciArtifactRepository) ociRepo
         ociMavenRepo.getUrl().toString() == 'https://registry-1.docker.io'
         ociMavenRepo.getNamespace().get() == 'maven'
         ociMavenRepo.hasCredentials()
@@ -153,7 +153,7 @@ class OciMavenRepositoryIntegrationTest extends Specification {
         given: "An OCI Maven repository"
         Project project = ProjectBuilder.builder().build()
         project.pluginManager.apply('io.seqera.maven-oci-publish')
-        def repo = project.objects.newInstance(OciMavenRepository, 'test')
+        def repo = project.objects.newInstance(MavenOciArtifactRepository, 'test')
         
         when: "Configuring with URL and namespace"
         repo.setUrl('https://registry.example.com')
@@ -190,7 +190,7 @@ class OciMavenRepositoryIntegrationTest extends Specification {
 
         then: "Repository should allow insecure protocol"
         def publishing = project.extensions.getByType(PublishingExtension)
-        def ociRepo = (OciMavenRepository) publishing.repositories.findByName('localRegistry')
+        def ociRepo = (MavenOciArtifactRepository) publishing.repositories.findByName('localRegistry')
         ociRepo.isAllowInsecureProtocol() == true
         ociRepo.getInsecure().get() == true
     }

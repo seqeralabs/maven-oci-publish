@@ -34,7 +34,7 @@ import org.gradle.api.provider.Property;
  * OCI Maven repository implementation for publishing artifacts to OCI registries.
  * This integrates with Gradle's standard publishing.repositories DSL.
  */
-public class OciMavenRepository implements MavenArtifactRepository {
+public class MavenOciArtifactRepository implements MavenArtifactRepository {
     
     private final String name;
     private final Property<String> url;
@@ -44,7 +44,7 @@ public class OciMavenRepository implements MavenArtifactRepository {
     private final AuthenticationContainer authenticationContainer;
     
     @Inject
-    public OciMavenRepository(ObjectFactory objectFactory, String name) {
+    public MavenOciArtifactRepository(ObjectFactory objectFactory, String name) {
         this.name = name;
         this.url = objectFactory.property(String.class);
         this.namespace = objectFactory.property(String.class);
