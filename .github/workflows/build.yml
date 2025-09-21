@@ -20,6 +20,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    env:
+      OCI_REGISTRY_USERNAME: public-cr-admin
+      OCI_REGISTRY_PASSWORD: ${{ secrets.OCI_REGISTRY_PASSWORD }}
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -44,7 +48,15 @@ jobs:
       run: chmod +x ./gradlew
       
     - name: Run tests
-      run: ./gradlew test functionalTest --info
+      run: ./gradlew test --info
+      
+    - name: Test publisher example
+      run: bash run.sh
+      working-directory: example/publisher
+      
+    - name: Test consumer example
+      run: bash run.sh
+      working-directory: example/consumer
       
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -54,3 +66,9 @@ jobs:
         path: |
           plugin/build/reports/tests/
           plugin/build/test-results/
+
+  release:
+    needs: test
+    if: github.ref == 'refs/heads/master' && contains(github.event.head_commit.message, '[release]')
+    uses: ./.github/workflows/release.yml
+    secrets: inherit
