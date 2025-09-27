@@ -138,9 +138,9 @@ class MavenOciLifecycleWithAuthIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('testRegistry') {
-                        url = 'http://${registryUrl}'
-                        namespace = 'maven'
+                    mavenOci {
+                        name = 'testRegistry'
+                        url = 'http://${registryUrl}/maven'
                         insecure = true
                         // No authentication required - this demonstrates basic ORAS SDK functionality
                     }

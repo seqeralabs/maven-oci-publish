@@ -11,7 +11,7 @@ This example demonstrates how to consume a Java library published to Docker Hub 
 
 ## ✅ Current Capabilities
 
-This example demonstrates the new direct `oci()` syntax for consuming libraries from OCI registries. The Maven OCI Publish Plugin now supports both **publishing** and **consuming** artifacts from OCI registries using standard Gradle dependency syntax.
+This example demonstrates the new `mavenOci` syntax for consuming libraries from OCI registries. The Maven OCI Publish Plugin now supports both **publishing** and **consuming** artifacts from OCI registries using standard Gradle dependency syntax.
 
 ## ⚠️ Important: Repository Must Exist
 
@@ -74,7 +74,7 @@ ociRepositories {
 }
 
 dependencies {
-    implementation oci('io.seqera:shared-library:1.0.0')
+    implementation 'io.seqera:shared-library:1.0.0'  // Resolves from mavenOci repository
 }
 ```
 

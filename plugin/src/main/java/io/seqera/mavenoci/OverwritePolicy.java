@@ -31,7 +31,8 @@ package io.seqera.mavenoci;
  * 
  * <h2>Usage</h2>
  * <pre>{@code
- * oci('myRepo') {
+ * mavenOci {
+ *     name = 'myRepo'
  *     url = 'https://registry.com'
  *     overwritePolicy = 'skip'  // or 'override' or 'fail'
  * }

@@ -87,13 +87,14 @@ All artifacts are stored as OCI artifacts in Docker Hub.
 
 ## 🔧 Configuration Syntax
 
-This example uses the new direct `oci()` syntax for configuring repositories:
+This example uses the new `mavenOci` syntax for configuring repositories:
 
 ```gradle
 publishing {
     repositories {
-        // OCI registry using the new direct syntax
-        oci('seqeraPublic') {
+        // OCI registry using the new syntax
+        mavenOci {
+            name = 'seqeraPublic'
             url = 'https://public.cr.stage-seqera.io'
             namespace = 'maven'
             credentials {

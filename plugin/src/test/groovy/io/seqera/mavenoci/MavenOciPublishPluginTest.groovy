@@ -47,7 +47,7 @@ class MavenOciPublishPluginTest extends Specification {
 
         then: "The plugin should integrate with the maven-publish plugin"
         // Validates that the plugin integrates with maven-publish properly
-        // The oci() method is now available directly in publishing.repositories
+        // The mavenOci method is now available directly in publishing.repositories
         project.plugins.hasPlugin("maven-publish")
         
         and: "The plugin should create the lifecycle task 'publishToOciRegistries'"

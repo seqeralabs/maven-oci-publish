@@ -59,7 +59,8 @@ import org.gradle.util.GradleVersion;
  *             url = 'https://repo1.maven.org/maven2/'
  *         }
  *         
- *         oci('docker') {
+ *         mavenOci {
+ *             name = 'docker'
  *             url = 'https://registry-1.docker.io'
  *             namespace = 'maven'
  *             credentials {
@@ -139,7 +140,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
     /**
      * Intercept OCI repositories during creation to capture them for our processing
      * NOTE: Since we're not adding OCI repositories to publishing.repositories anymore,
-     * this method is no longer needed - repositories are added directly to our list in oci() methods
+     * this method is no longer needed - repositories are added directly to our list in mavenOci methods
      */
     private void interceptOciRepositories(PublishingExtension publishing, Project project, java.util.List<MavenOciArtifactRepository> ociRepositories) {
         // No-op since OCI repositories are now managed separately from maven-publish
@@ -148,37 +149,37 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
     
     
     /**
-     * Option E: Add oci() method via programmatic factory approach
+     * Option E: Add mavenOci method via programmatic factory approach
      */
     private void extendPublishingRepositories(PublishingExtension publishing, Project project) {
-        logger.debug("Adding oci() factory method to publishing.repositories for project: {}", project.getName());
+        logger.debug("Adding mavenOci factory method to publishing.repositories for project: {}", project.getName());
         
         // Create a simple oci factory using Groovy's extensibility 
         addOciRepositoryFactory(publishing.getRepositories(), project);
-        logger.info("Successfully added oci() method support to publishing.repositories");
+        logger.info("Successfully added mavenOci method support to publishing.repositories");
     }
     
     /**
-     * Extend main project repositories with oci() method for dependency resolution
+     * Extend main project repositories with mavenOci method for dependency resolution
      */
     private void extendMainRepositories(Project project) {
-        logger.debug("Adding oci() factory method to main repositories for project: {}", project.getName());
+        logger.debug("Adding mavenOci factory method to main repositories for project: {}", project.getName());
         
         // Get the main project repositories
         org.gradle.api.artifacts.dsl.RepositoryHandler repositories = project.getRepositories();
         addOciRepositoryFactory(repositories, project);
-        logger.info("Successfully added oci() method support to main repositories");
+        logger.info("Successfully added mavenOci method support to main repositories");
     }
     
     /**
-     * Add oci() method directly to repositories using advanced Groovy approach
+     * Add mavenOci method directly to repositories using advanced Groovy approach
      */
     private void addOciRepositoryFactory(org.gradle.api.artifacts.dsl.RepositoryHandler repositories, Project project) {
         try {
             // Method 1: Create factory for backward compatibility
             project.getExtensions().getExtraProperties().set("ociRepositoryFactory", new OciRepositoryFactory(repositories, project));
             
-            // Method 2: Try to add oci() method directly to repositories using extension properties
+            // Method 2: Try to add mavenOci method directly to repositories using extension properties
             addDirectOciMethod(repositories, project);
             
             logger.info("Successfully added OCI repository factory and direct method");
@@ -203,11 +204,11 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
     }
     
     /**
-     * Add oci() method directly to RepositoryHandler using ExpandoMetaClass approach
+     * Add mavenOci property directly to RepositoryHandler using ExpandoMetaClass approach
      */
     private void addDirectOciMethod(org.gradle.api.artifacts.dsl.RepositoryHandler repositories, Project project) {
         try {
-            logger.info("Attempting to add oci() method to repositories of type: {}", repositories.getClass().getName());
+            logger.info("Attempting to add mavenOci property to repositories of type: {}", repositories.getClass().getName());
             
             // Use reflection to access and manipulate the MetaClass
             java.lang.reflect.Method getMetaClass = repositories.getClass().getMethod("getMetaClass");
@@ -220,25 +221,24 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             // Check if this is the publishing repositories container
             final boolean isPublishingRepo = detectIsPublishingRepo(project, repositories);
             
-            // Create the oci method implementation
-            groovy.lang.Closure<?> ociMethod = new groovy.lang.Closure<Object>(this) {
+            // Create the mavenOci property implementation
+            groovy.lang.Closure<?> mavenOciProperty = new groovy.lang.Closure<Object>(this) {
                 public Object doCall(Object[] args) {
-                    if (args.length == 0) {
-                        throw new IllegalArgumentException("oci() method requires at least a name parameter");
-                    }
+                    groovy.lang.Closure<?> configureAction = args.length > 0 && args[0] instanceof groovy.lang.Closure ? 
+                        (groovy.lang.Closure<?>) args[0] : null;
                     
-                    String name = args[0].toString();
-                    groovy.lang.Closure<?> configureAction = args.length > 1 && args[1] instanceof groovy.lang.Closure ? 
-                        (groovy.lang.Closure<?>) args[1] : null;
+                    // Extract URL and optional name from configuration closure for name generation
+                    ConfigExtractionResult config = extractConfigFromClosure(configureAction);
+                    final String repositoryName = determineRepositoryName(config, isPublishingRepo);
                     
-                    logger.info("Creating OCI repository '{}' via direct oci() method (type: {})", name, 
+                    logger.info("Creating OCI repository '{}' via mavenOci property (type: {})", repositoryName, 
                                isPublishingRepo ? "publishing" : "dependency");
                     
                     if (isPublishingRepo) {
                         // For publishing - create OciMavenRepository for publishing tasks
-                        MavenOciArtifactRepository ociRepo = project.getObjects().newInstance(MavenOciArtifactRepository.class, name);
+                        MavenOciArtifactRepository ociRepo = project.getObjects().newInstance(MavenOciArtifactRepository.class, repositoryName);
                         
-                        // Configure the repository if configuration block provided
+                        // Configure the repository directly (not using tempSpec since it's different type)
                         if (configureAction != null) {
                             org.gradle.util.internal.ConfigureUtil.configure(configureAction, ociRepo);
                         }
@@ -249,7 +249,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                             (java.util.List<MavenOciArtifactRepository>) project.getExtensions().getExtraProperties().get("ociRepositoriesForProcessing");
                         if (ociRepositories != null && !ociRepositories.contains(ociRepo)) {
                             ociRepositories.add(ociRepo);
-                            logger.debug("Added OCI repository '{}' to publishing list", name);
+                            logger.debug("Added OCI repository '{}' to publishing list", repositoryName);
                         }
                         
                         // IMPORTANT: Do NOT add to publishing.repositories to avoid ClassCastException from maven-publish
@@ -258,7 +258,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                             // Test scenario - add immediately for visibility
                             try {
                                 repositories.add(ociRepo);
-                                logger.debug("Added OCI repository '{}' to publishing.repositories for test visibility", name);
+                                logger.debug("Added OCI repository '{}' to publishing.repositories for test visibility", repositoryName);
                             } catch (Exception e) {
                                 logger.debug("Could not add OCI repository for test visibility: {}", e.getMessage());
                             }
@@ -267,7 +267,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                             project.afterEvaluate(p -> {
                                 try {
                                     repositories.add(ociRepo);
-                                    logger.debug("Added OCI repository '{}' to publishing.repositories for test visibility", name);
+                                    logger.debug("Added OCI repository '{}' to publishing.repositories for test visibility", repositoryName);
                                 } catch (Exception e) {
                                     logger.debug("Could not add OCI repository for test visibility: {}", e.getMessage());
                                 }
@@ -280,11 +280,11 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                         // For dependency resolution - create Maven repository backed by OCI
                         org.gradle.api.artifacts.repositories.MavenArtifactRepository mavenRepo = repositories.maven(mavenRepoAction -> {
                             // Set the correct name initially so factory doesn't need to change it
-                            mavenRepoAction.setName(name);
+                            mavenRepoAction.setName(repositoryName);
                         });
                         
-                        // Create OCI spec from configuration
-                        MavenOciRepositorySpec spec = project.getObjects().newInstance(MavenOciRepositorySpec.class, name);
+                        // Create OCI spec with the generated name
+                        MavenOciRepositorySpec spec = project.getObjects().newInstance(MavenOciRepositorySpec.class, repositoryName);
                         if (configureAction != null) {
                             org.gradle.util.internal.ConfigureUtil.configure(configureAction, spec);
                         }
@@ -292,14 +292,14 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                         // Use factory to create OCI-backed Maven repository
                         MavenOciRepositoryFactory.createOciMavenRepository(spec, mavenRepo, project);
                         
-                        logger.debug("Created OCI-backed Maven repository for dependency resolution: {}", name);
+                        logger.debug("Created OCI-backed Maven repository for dependency resolution: {}", repositoryName);
                         return mavenRepo;
                     }
                 }
             };
             
-            // Add the method to the ExpandoMetaClass
-            emc.registerInstanceMethod("oci", ociMethod);
+            // Add the property to the ExpandoMetaClass
+            emc.registerInstanceMethod("mavenOci", mavenOciProperty);
             
             // Initialize the ExpandoMetaClass
             emc.initialize();
@@ -308,7 +308,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             java.lang.reflect.Method setMetaClass = repositories.getClass().getMethod("setMetaClass", groovy.lang.MetaClass.class);
             setMetaClass.invoke(repositories, emc);
             
-            logger.info("Successfully added direct oci() method to repositories via ExpandoMetaClass");
+            logger.info("Successfully added mavenOci property to repositories via ExpandoMetaClass");
         } catch (Exception e) {
             logger.error("Failed to add direct oci method via ExpandoMetaClass: " + e.getMessage(), e);
             e.printStackTrace();
@@ -319,11 +319,154 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
     }
     
     /**
-     * Fallback approach: Add methodMissing handler to intercept oci() calls
+     * Extract URL and optional name from configuration closure by analyzing the closure's delegate calls
+     */
+    private ConfigExtractionResult extractConfigFromClosure(groovy.lang.Closure<?> configClosure) {
+        if (configClosure == null) {
+            return new ConfigExtractionResult("", "");
+        }
+        
+        try {
+            // Create a simple config extractor that captures url and name property assignments
+            final StringBuilder urlCapture = new StringBuilder();
+            final StringBuilder nameCapture = new StringBuilder();
+            Object configExtractor = new Object() {
+                public void setUrl(String url) {
+                    urlCapture.append(url);
+                }
+                public void url(String url) {  // For property assignment syntax
+                    urlCapture.append(url);
+                }
+                public void setName(String name) {
+                    nameCapture.append(name);
+                }
+                public void name(String name) {  // For property assignment syntax
+                    nameCapture.append(name);
+                }
+                // Handle property syntax like: url = "..." or name = "..."
+                public void call(String methodName, Object value) {
+                    if ("url".equals(methodName) && value != null) {
+                        urlCapture.append(value.toString());
+                    } else if ("name".equals(methodName) && value != null) {
+                        nameCapture.append(value.toString());
+                    }
+                }
+            };
+            
+            // Create a copy of the closure with our config extractor as delegate
+            groovy.lang.Closure<?> extractorClosure = (groovy.lang.Closure<?>) configClosure.clone();
+            extractorClosure.setDelegate(configExtractor);
+            extractorClosure.setResolveStrategy(groovy.lang.Closure.DELEGATE_FIRST);
+            
+            // Try to execute the closure to capture URL and name
+            try {
+                extractorClosure.call();
+            } catch (Exception e) {
+                // If closure execution fails, ignore and return empty
+                logger.debug("Could not extract config from configuration closure: {}", e.getMessage());
+            }
+            
+            return new ConfigExtractionResult(urlCapture.toString(), nameCapture.toString());
+        } catch (Exception e) {
+            logger.debug("Failed to extract config from closure: {}", e.getMessage());
+            return new ConfigExtractionResult("", "");
+        }
+    }
+    
+    /**
+     * Simple data class to hold extracted URL and name from configuration closure
+     */
+    private static class ConfigExtractionResult {
+        final String url;
+        final String name;
+        
+        ConfigExtractionResult(String url, String name) {
+            this.url = url != null ? url : "";
+            this.name = name != null ? name : "";
+        }
+    }
+    
+    /**
+     * Determine the repository name based on configuration and repository type
+     */
+    private String determineRepositoryName(ConfigExtractionResult config, boolean isPublishingRepo) {
+        if (isPublishingRepo && !config.name.isEmpty()) {
+            // For publishing repositories, prefer explicit name if provided
+            logger.debug("Using explicit name '{}' for publishing repository", config.name);
+            return config.name;
+        }
+        
+        // For dependency repositories or publishing without explicit name, use URL-based naming
+        if (!config.url.isEmpty()) {
+            String urlBasedName = generateRepositoryNameFromUrl(config.url);
+            logger.debug("Generated URL-based name '{}' from URL '{}'", urlBasedName, config.url);
+            return urlBasedName;
+        }
+        
+        // Fallback to default name
+        return "mavenOci";
+    }
+    
+    /**
+     * Generate repository name from URL by converting the full path to a safe name
+     * Examples:
+     *   https://registry.com/maven -> registry_com_maven
+     *   https://docker.io/namespace/maven -> docker_io_namespace_maven  
+     *   http://localhost:5000 -> localhost_5000
+     *   https://ghcr.io/owner/repo/maven -> ghcr_io_owner_repo_maven
+     */
+    private String generateRepositoryNameFromUrl(String url) {
+        try {
+            java.net.URI uri = new java.net.URI(url);
+            StringBuilder nameBuilder = new StringBuilder();
+            
+            // Add hostname
+            String host = uri.getHost();
+            if (host != null) {
+                nameBuilder.append(host.replaceAll("[^a-zA-Z0-9]", "_"));
+            }
+            
+            // Add port if not default
+            int port = uri.getPort();
+            if (port != -1 && port != 80 && port != 443) {
+                nameBuilder.append("_").append(port);
+            }
+            
+            // Add path components
+            String path = uri.getPath();
+            if (path != null && !path.isEmpty() && !"/".equals(path)) {
+                // Remove leading slash and replace special characters
+                String cleanPath = path.replaceFirst("^/", "").replaceAll("[^a-zA-Z0-9]", "_");
+                if (!cleanPath.isEmpty()) {
+                    nameBuilder.append("_").append(cleanPath);
+                }
+            }
+            
+            String result = nameBuilder.toString();
+            
+            // Ensure we have a valid name
+            if (result.isEmpty()) {
+                result = "mavenOci";
+            }
+            
+            // Remove trailing underscores
+            result = result.replaceAll("_+$", "");
+            
+            logger.debug("Generated repository name '{}' from URL '{}'", result, url);
+            return result;
+            
+        } catch (Exception e) {
+            logger.warn("Could not parse URL '{}' for name generation, using default: {}", url, e.getMessage());
+            return "mavenOci";
+        }
+    }
+    
+    /**
+     * Fallback approach: Add methodMissing handler to intercept mavenOci calls
      */
     private void addMethodMissingHandler(org.gradle.api.artifacts.dsl.RepositoryHandler repositories, Project project) {
         try {
-            logger.info("Attempting to add methodMissing handler for oci() method");
+            logger.info("Attempting to add methodMissing handler for mavenOci method");
             
             // Get the MetaClass and add a methodMissing handler using reflection
             java.lang.reflect.Method getMetaClass = repositories.getClass().getMethod("getMetaClass");
@@ -332,16 +475,16 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             // Create a methodMissing closure
             groovy.lang.Closure<?> methodMissing = new groovy.lang.Closure<Object>(this) {
                 public Object doCall(String name, Object args) {
-                    if ("oci".equals(name)) {
-                        // Handle oci method call
+                    if ("mavenOci".equals(name)) {
+                        // Handle mavenOci method call
                         Object[] argArray = (Object[]) args;
-                        if (argArray.length == 0) {
-                            throw new IllegalArgumentException("oci() method requires at least a name parameter");
-                        }
+                        groovy.lang.Closure<?> configureAction = argArray.length > 0 && argArray[0] instanceof groovy.lang.Closure ? 
+                            (groovy.lang.Closure<?>) argArray[0] : null;
                         
-                        String repoName = argArray[0].toString();
-                        groovy.lang.Closure<?> configureAction = argArray.length > 1 && argArray[1] instanceof groovy.lang.Closure ? 
-                            (groovy.lang.Closure<?>) argArray[1] : null;
+                        // Extract URL and optional name from configuration closure for name generation
+                        ConfigExtractionResult config = extractConfigFromClosure(configureAction);
+                        // Note: methodMissing doesn't know if it's publishing or dependency, assume dependency for now
+                        String repoName = determineRepositoryName(config, false);
                         
                         logger.info("Creating OCI repository '{}' via methodMissing handler", repoName);
                         
@@ -394,7 +537,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             // Set the methodMissing handler
             mc.setProperty(repositories, "methodMissing", methodMissing);
             
-            logger.info("Successfully added methodMissing handler for oci() method");
+            logger.info("Successfully added methodMissing handler for mavenOci method");
         } catch (Exception e) {
             logger.error("Failed to add methodMissing handler: " + e.getMessage(), e);
             e.printStackTrace();
@@ -454,7 +597,7 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
     }
     
     /**
-     * Closure that acts as the oci() method for repositories
+     * Closure that acts as the mavenOci method for repositories
      */
     public static class OciMethodClosure extends groovy.lang.Closure<MavenOciArtifactRepository> {
         private final org.gradle.api.artifacts.dsl.RepositoryHandler repositories;

@@ -162,7 +162,8 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('testRegistry') {
+                    mavenOci {
+                        name = 'testRegistry'
                         url = 'http://${registryUrl}/maven' // HTTP for testing with namespace in URL
                         insecure = true                      // Allow HTTP connections
                     }
@@ -214,7 +215,8 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('testRegistry') {
+                    mavenOci {
+                        name = 'testRegistry'
                         url = 'http://${registryUrl}/maven' // Include namespace in URL
                         insecure = true
                         credentials {
@@ -265,7 +267,8 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('testRegistry') {
+                    mavenOci {
+                        name = 'testRegistry'
                         url = 'http://${registryUrl}/maven' // Include namespace in URL
                         insecure = true
                         // No credentials configured - should use anonymous access
@@ -313,7 +316,8 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('testRegistry') {
+                    mavenOci {
+                        name = 'testRegistry'
                         url = 'http://${registryUrl}/maven' // Include namespace in URL
                         insecure = true
                         // No credentials configured - should use anonymous access
@@ -388,7 +392,8 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('testRegistry') {
+                    mavenOci {
+                        name = 'testRegistry'
                         url = 'http://${registryUrl}/maven' // Include namespace in URL
                         insecure = true
                     }
@@ -452,9 +457,9 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('nonExistentRegistry') {
-                        url = 'http://${registryUrl}' // Intentionally unreachable URL
-                        namespace = 'maven'
+                    mavenOci {
+                        name = 'nonExistentRegistry'
+                        url = 'http://${registryUrl}/maven' // Intentionally unreachable URL
                         insecure = true               // Allow HTTP
                     }
                 }
@@ -509,7 +514,8 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('testRegistry') {
+                    mavenOci {
+                        name = 'testRegistry'
                         url = 'http://${registryUrl}/maven' // Test registry with namespace in URL
                         insecure = true                     // Allow HTTP
                     }

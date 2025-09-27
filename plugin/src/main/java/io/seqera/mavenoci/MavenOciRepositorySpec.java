@@ -32,12 +32,12 @@ import java.util.Optional;
  * block for consuming Maven artifacts from OCI registries.</p>
  * 
  * <h2>Usage</h2>
- * <p>OCI repositories are configured using the {@code oci("name")} factory method:</p>
+ * <p>OCI repositories are configured using the {@code mavenOci} factory method:</p>
  * <pre>{@code
  * repositories {
  *     mavenCentral()
  *     
- *     oci("myRegistry") {
+ *     mavenOci {
  *         url = 'https://registry.example.com/maven'
  *         insecure = false
  *         credentials {
@@ -68,11 +68,15 @@ import java.util.Optional;
  */
 public abstract class MavenOciRepositorySpec implements Named {
     
-    private final String name;
+    private String name;
     private PasswordCredentials credentials;
     
     @Inject
     public MavenOciRepositorySpec(String name) {
+        this.name = name;
+    }
+    
+    public void setName(String name) {
         this.name = name;
     }
     

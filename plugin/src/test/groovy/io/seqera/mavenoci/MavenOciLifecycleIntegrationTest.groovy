@@ -109,7 +109,8 @@ class MavenOciLifecycleIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('testRegistry') {
+                    mavenOci {
+                        name = 'testRegistry'
                         url = 'http://${registryUrl}/maven'  // Use HTTP for testing with namespace in URL
                         insecure = true                      // Allow HTTP connections
                     }
@@ -239,7 +240,7 @@ class MavenOciLifecycleIntegrationTest extends Specification {
                 mavenCentral()  // Standard Maven dependencies
                 
                 // Create OCI repository using named factory method
-                oci("testRegistry") { 
+                mavenOci { 
                     url = 'http://${registryUrl}/maven'  // Include namespace in URL path
                     insecure = true
                 }

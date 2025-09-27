@@ -22,7 +22,33 @@ A Gradle plugin that enables **bidirectional** Maven artifact management with OC
 ```gradle
 plugins {
     id 'java'
-    id 'io.seqera.maven-oci-publish' version 'x.x.x'  // Automatically applies maven-publish
+    id 'io.seqera.maven-oci-publish'
+}
+```
+
+## Syntax Overview
+
+The plugin provides a clean, consistent syntax for both consuming and publishing:
+
+**Dependency Resolution:**
+
+```gradle
+repositories {
+    mavenOci {
+        url = 'https://registry.com/maven'
+    }
+}
+```
+
+**Publishing:**
+
+```gradle
+publishing.repositories {
+    mavenOci {
+        name = 'myRegistry'
+        url = 'https://registry.com/maven'
+        credentials { ... }
+    }
 }
 ```
 
@@ -36,19 +62,19 @@ Add OCI repositories to your `repositories` block:
 repositories {
     mavenCentral()  // Fallback for standard dependencies
     
-    oci("myRegistry") {
+    mavenOci {
         url = 'https://registry.example.com/maven'
     }
 }
 
 dependencies {
-    implementation 'com.example:my-library:1.0.0'  // Resolves from OCI if available
+    implementation 'com.example:my-library:1.0.0'
 }
 ```
 
-### 📤 Publishing to OCI Registries
+### 📤 Publishing to OCI Registries  
 
-Configure publishing with the `oci` extension:
+Configure publishing with the `mavenOci` extension. You can optionally specify a `name` for clean task names:
 
 ```gradle
 publishing {
@@ -73,8 +99,9 @@ publishing {
             url = 'https://repo1.maven.org/maven2/'
         }
         
-        // OCI registry using the new direct syntax
-        oci('myRegistry') {
+        // Maven repository over OCI registry
+        mavenOci {
+            name = 'myRegistry'
             url = 'https://registry.example.com'
             credentials {
                 username = 'user'
@@ -105,7 +132,8 @@ The plugin provides an `overwritePolicy` option to control behavior when publish
 ```gradle
 publishing {
     repositories {
-        oci('myRegistry') {
+        mavenOci {
+            name = 'myRegistry'
             url = 'https://registry.example.com'
             overwritePolicy = 'skip'  // fail | override | skip
             credentials {
@@ -121,7 +149,8 @@ publishing {
 
 #### Fail Policy (Default)
 ```gradle
-oci('registry') {
+mavenOci {
+    name = 'registry'
     overwritePolicy = 'fail'  // or omit for default
 }
 ```
@@ -131,7 +160,8 @@ oci('registry') {
 
 #### Override Policy
 ```gradle
-oci('registry') {
+mavenOci {
+    name = 'registry'
     overwritePolicy = 'override'
 }
 ```
@@ -141,7 +171,8 @@ oci('registry') {
 
 #### Skip Policy
 ```gradle
-oci('registry') {
+mavenOci {
+    name = 'registry'
     overwritePolicy = 'skip'
 }
 ```
@@ -225,7 +256,7 @@ OCI registries often use namespaces to organize repositories. The plugin support
 
 **URL Path Namespace**: Supports unlimited nested namespace levels
 ```gradle
-oci("myRegistry") {
+mavenOci {
     url = 'https://registry.com/org/team/maven'
 }
 ```
@@ -241,7 +272,8 @@ For publishing, you can also configure namespace separately:
 ```gradle
 publishing {
     repositories {
-        oci('docker') {
+        mavenOci {
+            name = 'docker'
             url = 'https://registry.com'
             namespace = 'org/team/maven'
         }
@@ -352,7 +384,8 @@ The plugin integrates with standard Gradle publishing:
 
 ### Username/Password
 ```gradle
-oci("registry") {
+mavenOci {
+    name = 'registry'
     url = 'https://registry.example.com'
     credentials {
         username = 'user'
@@ -363,7 +396,8 @@ oci("registry") {
 
 ### Environment Variables
 ```gradle
-oci("registry") {
+mavenOci {
+    name = 'registry'
     url = 'https://registry.example.com'
     credentials {
         username = System.getenv('REGISTRY_USERNAME')
@@ -376,7 +410,7 @@ oci("registry") {
 
 ### Insecure Registries (HTTP)
 ```gradle
-oci("localDev") {
+mavenOci {
     url = 'http://localhost:5000'
     insecure = true
 }
@@ -385,12 +419,12 @@ oci("localDev") {
 ### Multiple Registries
 ```gradle
 repositories {
-    oci("internal") {
+    mavenOci {
         url = 'https://internal.company.com/maven'
         credentials { /* ... */ }
     }
     
-    oci("public") {
+    mavenOci {
         url = 'https://public.registry.com/maven'
     }
     
@@ -402,7 +436,8 @@ repositories {
 ```gradle
 publishing {
     repositories {
-        oci('custom') {
+        mavenOci {
+            name = 'custom'
             url = 'https://registry.com'
             namespace = 'my-org/maven-artifacts'
         }
@@ -419,12 +454,12 @@ repositories {
     mavenCentral()
     
     // Public OCI registry
-    oci("seqeraPublic") {
+    mavenOci {
         url = 'https://public.cr.seqera.io/maven'
     }
     
     // Private registry with authentication
-    oci("companyPrivate") {
+    mavenOci {
         url = 'https://registry.company.com/maven'
         credentials {
             username = project.findProperty('registryUser')
@@ -433,7 +468,7 @@ repositories {
     }
     
     // Local development registry
-    oci("localDev") {
+    mavenOci {
         url = 'http://localhost:5000'
         insecure = true
     }
@@ -456,9 +491,9 @@ publishing {
     }
     
     repositories {
-        oci('dockerHub') {
-            url = 'https://registry-1.docker.io'
-            namespace = 'maven'
+        mavenOci {
+            name = 'dockerHub'
+            url = 'https://registry-1.docker.io/maven'
             credentials {
                 username = System.getenv('DOCKER_USERNAME')
                 password = System.getenv('DOCKER_PASSWORD')

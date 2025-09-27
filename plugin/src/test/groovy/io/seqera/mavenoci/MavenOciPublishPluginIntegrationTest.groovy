@@ -63,15 +63,15 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('registry1') {
-                        url = 'https://registry1.example.com'
-                        namespace = 'maven'
+                    mavenOci {
+                        name = 'registry1'
+                        url = 'https://registry1.example.com/maven'
                         insecure = false
                     }
                     
-                    oci('registry2') {
-                        url = 'https://registry2.example.com'
-                        namespace = 'maven'
+                    mavenOci {
+                        name = 'registry2'
+                        url = 'https://registry2.example.com/maven'
                         insecure = false
                     }
                 }
@@ -88,6 +88,7 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
 
         then:
         result.output.contains("publishToOciRegistries")
+        // Repository names use explicit names
         result.output.contains("publishMavenPublicationToRegistry1Repository")
         result.output.contains("publishMavenPublicationToRegistry2Repository")
     }
@@ -119,9 +120,9 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
                 }
                 
                 repositories {
-                    oci('example') {
-                        url = 'https://example.com'
-                        namespace = 'maven'
+                    mavenOci {
+                        name = 'example'
+                        url = 'https://example.com/maven'
                     }
                 }
             }

@@ -98,13 +98,14 @@ By default, these examples use Docker Hub:
 - **Repository**: pditommaso/maven
 - **Artifacts**: JAR, sources, javadoc, POM
 
-To use a different registry, update the `oci()` configuration in `publisher/build.gradle`:
+To use a different registry, update the `mavenOci` configuration in `publisher/build.gradle`:
 
 ```gradle
 publishing {
     repositories {
-        // OCI registry using the new direct syntax
-        oci('seqeraPublic') {
+        // OCI registry using the new syntax
+        mavenOci {
+            name = 'seqeraPublic'
             url = 'https://public.cr.stage-seqera.io'
             namespace = 'maven'
             credentials {

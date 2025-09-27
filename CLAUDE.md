@@ -58,13 +58,13 @@ The plugin follows a standard Gradle plugin architecture with these key componen
 ### Plugin Flow
 
 #### Publishing Flow
-1. Plugin applies and creates direct `oci()` method in `publishing.repositories`
-2. Users configure repositories using `publishing { repositories { oci('name') { } } }` syntax
+1. Plugin applies and creates `mavenOci` method in `publishing.repositories`
+2. Users configure repositories using `publishing { repositories { mavenOci { name = 'name' } } }` syntax
 3. After project evaluation, plugin creates publishing tasks for each publication-repository combination
 4. Tasks use ORAS Java SDK to push Maven artifacts to OCI registries with proper media types
 
 #### Dependency Resolution Flow
-1. Users configure OCI repositories using `repositories { oci("name") { url = "..."; insecure = true } }`
+1. Users configure OCI repositories using `repositories { mavenOci { url = "..."; insecure = true } }`
 2. Plugin installs hooks into Gradle's dependency resolution system
 3. Before dependency resolution, hooks check each dependency against OCI registries
 4. Maven coordinates are mapped to OCI references (e.g., `com.example:lib:1.0` → `registry.com/com-example/lib:1.0`)
@@ -129,16 +129,16 @@ repositories {
     mavenCentral()
     
     // Configure OCI repositories for dependency resolution
-    oci("seqeraPublic") {
+    mavenOci {
         url = 'https://seqera.io/oci-registry'
     }
     
     // Multi-level namespace support
-    oci("nestedNamespace") {
+    mavenOci {
         url = 'https://registry.com/org/team/maven'
     }
     
-    oci("localRegistry") {
+    mavenOci {
         url = 'http://localhost:5000/maven'
         insecure = true
     }
@@ -151,7 +151,7 @@ dependencies {
 
 ### For Publishing Artifacts to OCI Registries
 
-Publishing uses the standard `publishing` DSL with direct `oci()` method. Supports both URL-embedded namespaces and separate namespace configuration:
+Publishing uses the standard `publishing` DSL with `mavenOci` method. Supports both URL-embedded namespaces and separate namespace configuration:
 
 ```gradle
 publishing {
@@ -163,7 +163,8 @@ publishing {
     
     repositories {
         // URL-embedded namespace approach
-        oci('seqeraPublic') {
+        mavenOci {
+            name = 'seqeraPublic'
             url = 'https://seqera.io/oci-registry/org/maven'
             credentials {
                 username = project.findProperty('oci.username')
@@ -172,7 +173,8 @@ publishing {
         }
         
         // Separate namespace configuration approach  
-        oci('dockerRegistry') {
+        mavenOci {
+            name = 'dockerRegistry'
             url = 'https://registry.com'
             namespace = 'org/team/maven'
             credentials {

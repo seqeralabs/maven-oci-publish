@@ -10,7 +10,7 @@ version = '1.0.0'
 repositories {
     mavenCentral()
     // Configure OCI repositories for dependency resolution using new syntax
-    oci("seqeraPublic") {
+    mavenOci {
         url = 'https://public.cr.stage-seqera.io/maven'
     }
 }
@@ -28,7 +28,8 @@ application {
 dependencies {
     // Normal Maven dependency using OCI repository!
     implementation 'io.seqera:shared-library:2.2.0'
-    // This automatically resolves to public.cr.stage-seqera.io/maven/io-seqera/shared-library:2.0.0
+    // This automatically resolves to public.cr.stage-seqera.io/maven/io-seqera/shared-library:2.2.0
+    // Repository will be named: public_cr_stage_seqera_io_maven
     
     implementation 'org.slf4j:slf4j-api:2.0.7'
     implementation 'ch.qos.logback:logback-classic:1.4.7'

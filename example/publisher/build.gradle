@@ -63,8 +63,9 @@ publishing {
     }
     
     repositories {
-        // OCI registry using the new direct syntax
-        oci('seqeraPublic') {
+        // OCI registry using the new syntax with explicit name for clean task names
+        mavenOci {
+            name = 'seqeraPublic'
             url = 'https://public.cr.stage-seqera.io/maven'
             overwritePolicy = 'override'
             credentials {
