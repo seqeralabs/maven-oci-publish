@@ -119,6 +119,7 @@ public class MavenOciProxy {
     private final boolean insecure;
     private final MavenOciResolver ociResolver;
     private final ConcurrentHashMap<String, byte[]> sessionCache;
+    private final OciLocalCache persistentCache;
     
     private HttpServer server;
     private int port;
@@ -134,8 +135,10 @@ public class MavenOciProxy {
         this.insecure = insecure;
         this.ociResolver = new MavenOciResolver(ociRegistryUrl, insecure, null, null);
         this.sessionCache = new ConcurrentHashMap<>();
+        this.persistentCache = new OciLocalCache(ociRegistryUrl);
         
-        logger.info("Created MavenOciProxy for OCI registry: {} (insecure: {})", ociRegistryUrl, insecure);
+        logger.info("Created MavenOciProxy for OCI registry: {} (insecure: {}) with persistent cache: {}", 
+                   ociRegistryUrl, insecure, persistentCache.getCacheDirectory());
     }
     
     /**
@@ -234,8 +237,18 @@ public class MavenOciProxy {
                 
                 logger.debug("Parsed Maven request: {}", request);
                 
-                // Try to resolve artifact from OCI registry
-                byte[] artifactContent = resolveArtifactFromOci(request);
+                // Skip OCI resolution for non-critical files if we already have core artifacts cached
+                String fileType = request.getFileType();
+                boolean shouldSkipOci = shouldSkipOciResolution(request);
+                
+                byte[] artifactContent = null;
+                
+                if (shouldSkipOci) {
+                    logger.debug("Skipping OCI resolution for non-critical file: {}", request.getCoordinate());
+                } else {
+                    // Try to resolve artifact from OCI registry
+                    artifactContent = resolveArtifactFromOci(request);
+                }
                 
                 if (artifactContent != null) {
                     // Set appropriate content type
@@ -250,9 +263,14 @@ public class MavenOciProxy {
                     
                     logger.info("Successfully served artifact from OCI: {} (size: {} bytes)", request.getCoordinate(), artifactContent.length);
                 } else {
-                    // Artifact not found in OCI registry
-                    logger.debug("Artifact not found in OCI registry: {}", request.getCoordinate());
-                    logger.warn("Could not find {} in OCI registry: {}", request.getCoordinate(), ociRegistryUrl);
+                    // Artifact not found in OCI registry or skipped
+                    if ("jar".equals(fileType) || "pom".equals(fileType)) {
+                        // Core Maven files should exist - this is concerning
+                        logger.warn("Could not find {} in OCI registry: {}", request.getCoordinate(), ociRegistryUrl);
+                    } else {
+                        // Everything else (.module, checksums, etc.) - debug level
+                        logger.debug("Artifact file not found in OCI registry: {}", request.getCoordinate());
+                    }
                     
                     // Add custom header with original OCI URL for better error reporting
                     exchange.getResponseHeaders().set("X-OCI-Registry-URL", ociRegistryUrl);
@@ -292,14 +310,57 @@ public class MavenOciProxy {
     }
     
     /**
-     * Resolves a Maven artifact from the OCI registry on-demand.
+     * Determines if OCI resolution should be skipped for a given request to avoid unnecessary downloads.
      * 
-     * <p>This method:</p>
+     * <p>This optimization prevents triggering full OCI artifact downloads for non-critical files
+     * when we already have the core artifacts (JAR and POM) cached. This significantly reduces
+     * network calls for requests to files like .module, checksums, or metadata that may not exist.</p>
+     * 
+     * @param request the Maven artifact request
+     * @return true if OCI resolution should be skipped, false otherwise
+     */
+    private boolean shouldSkipOciResolution(MavenArtifactRequest request) {
+        String fileType = request.getFileType();
+        
+        // Never skip core Maven files - they must be resolved
+        if ("jar".equals(fileType) || "pom".equals(fileType)) {
+            return false;
+        }
+        
+        // For non-critical files (.module, checksums), check if we already have the core artifacts cached
+        boolean hasJarCached = persistentCache.hasArtifactFile(
+            request.getGroupId(), 
+            request.getArtifactId(), 
+            request.getVersion(), 
+            request.getArtifactId() + "-" + request.getVersion() + ".jar"
+        );
+        
+        boolean hasPomCached = persistentCache.hasArtifactFile(
+            request.getGroupId(), 
+            request.getArtifactId(), 
+            request.getVersion(), 
+            request.getArtifactId() + "-" + request.getVersion() + ".pom"
+        );
+        
+        // Skip OCI resolution if we already have core artifacts - the requested file likely doesn't exist
+        if (hasJarCached && hasPomCached) {
+            logger.debug("Core artifacts cached for {}:{}:{}, skipping OCI resolution for {}", 
+                        request.getGroupId(), request.getArtifactId(), request.getVersion(), fileType);
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Resolves a Maven artifact from the OCI registry on-demand with persistent caching.
+     * 
+     * <p>This method implements a three-tier caching strategy:</p>
      * <ol>
-     *   <li>Checks the session cache for previously resolved artifacts</li>
-     *   <li>Uses {@link MavenOciResolver} to download artifacts from OCI registry</li>
-     *   <li>Searches downloaded files for the requested artifact type</li>
-     *   <li>Caches successful resolutions for the build session</li>
+     *   <li>Checks the session cache for previously resolved artifacts in current build</li>
+     *   <li>Checks the persistent cache for artifacts from previous builds</li>
+     *   <li>Uses {@link MavenOciResolver} to download artifacts from OCI registry as last resort</li>
+     *   <li>Stores successful downloads in persistent cache for future builds</li>
      * </ol>
      * 
      * @param request the parsed Maven artifact request
@@ -308,14 +369,30 @@ public class MavenOciProxy {
     private byte[] resolveArtifactFromOci(MavenArtifactRequest request) {
         String cacheKey = request.getCacheKey();
         
-        // Check session cache first
+        // 1. Check session cache first (fastest)
         if (sessionCache.containsKey(cacheKey)) {
             logger.debug("Found artifact in session cache: {}", request.getCoordinate());
             return sessionCache.get(cacheKey);
         }
         
+        // 2. Check persistent cache (fast, no network)
+        byte[] cachedContent = persistentCache.getArtifactFile(
+            request.getGroupId(),
+            request.getArtifactId(),
+            request.getVersion(),
+            request.getFileName()
+        );
+        
+        if (cachedContent != null) {
+            logger.debug("Found artifact in persistent cache: {}", request.getCoordinate());
+            // Store in session cache for subsequent requests in this build
+            sessionCache.put(cacheKey, cachedContent);
+            return cachedContent;
+        }
+        
+        // 3. Download from OCI registry (slowest, network required)
         try {
-            logger.info("Attempting to resolve artifact from OCI registry: {} (registry: {})", request.getCoordinate(), ociRegistryUrl);
+            logger.info("Resolving artifact from OCI registry: {} (registry: {})", request.getCoordinate(), ociRegistryUrl);
             
             // Create temporary directory for OCI resolution
             Path tempDir = Files.createTempDirectory("oci-proxy-");
@@ -331,8 +408,20 @@ public class MavenOciProxy {
                 if (!resolved) {
                     logger.warn("Artifact not found in OCI registry: {} (registry: {})", request.getCoordinate(), ociRegistryUrl);
                     return null;
-                } else {
-                    logger.info("Successfully resolved artifact from OCI registry: {}", request.getCoordinate());
+                }
+                
+                logger.info("Successfully resolved artifact from OCI registry: {}", request.getCoordinate());
+                
+                // Store complete artifact bundle in persistent cache first
+                boolean cached = persistentCache.storeArtifactBundle(
+                    request.getGroupId(),
+                    request.getArtifactId(),
+                    request.getVersion(),
+                    tempDir
+                );
+                
+                if (cached) {
+                    logger.debug("Stored artifact bundle in persistent cache: {}", request.getCoordinate());
                 }
                 
                 // Find the requested artifact file in the temp directory
@@ -356,6 +445,7 @@ public class MavenOciProxy {
             return null;
         }
     }
+    
     
     /**
      * Searches a temporary directory for the specific artifact file requested.
@@ -482,7 +572,11 @@ public class MavenOciProxy {
             }
         }
         
-        logger.warn("Artifact file not found in temp directory: {} (looking for: {})", tempDir, expectedFileName);
+        if (request.getFileType().equals("jar") || request.getFileType().equals("pom")) {
+            logger.warn("Artifact file not found in temp directory: {} (looking for: {})", tempDir, expectedFileName);
+        } else {
+            logger.debug("Artifact file not found in temp directory: {} (looking for: {})", tempDir, expectedFileName);
+        }
         return null;
     }
     
