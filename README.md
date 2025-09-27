@@ -281,89 +281,118 @@ publishing {
 }
 ```
 
-## Resolution Process
+## Resolution Architecture: HTTP Proxy Approach
 
-### Dependency Resolution Flow
+The Maven OCI Publish Plugin uses an **HTTP proxy architecture** that provides efficient dependency resolution while maintaining full compatibility with Gradle's dependency resolution system.
 
-When Gradle resolves dependencies that might be available in OCI registries, the following process occurs:
+### Core Architecture
+
+The plugin creates a **local HTTP proxy server** that mimics Maven repository structure and handles OCI resolution **on-demand** only when Gradle actually requests artifacts.
 
 ```mermaid
 graph TD
-    A[Gradle Dependency Resolution] --> B[Before Resolve Hook]
-    B --> C{Check Local Cache}
-    C -->|Found| D[Use Cached Artifacts]
-    C -->|Missing| E[Build OCI Reference]
-    E --> F[Attempt OCI Download]
-    F -->|Success| G[Cache Artifacts]
-    F -->|Failure| H[Continue with Next Repository]
-    G --> I[Gradle Uses Cached Files]
-    H --> J[Try Maven Central, etc.]
-    D --> I
-    J --> K[Build Continues]
-    I --> K
+    A[User Configuration] --> B[Plugin Creates HTTP Proxy]
+    B --> C[Gradle Repository Points to Proxy]
+    C --> D[Gradle Dependency Resolution Starts]
+    D --> E[Try Maven Central First]
+    E -->|Found| F[Use Maven Central Artifact]
+    E -->|Not Found| G[Try OCI Proxy]
+    G --> H[Proxy Intercepts HTTP Request]
+    H --> I[Parse Maven Request Path]
+    I --> J[Convert to OCI Reference]
+    J --> K[Fetch from OCI Registry with ORAS]
+    K -->|Success| L[Stream Artifact to Gradle]
+    K -->|Not Found| M[Return HTTP 404]
+    L --> N[Gradle Uses Artifact]
+    M --> O[Gradle Tries Next Repository]
 ```
 
-### Detailed Resolution Steps
+### Repository Order Benefits
 
-1. **Hook Installation**: When an OCI repository is configured, the plugin installs hooks into Gradle's dependency resolution system.
+The HTTP proxy approach ensures proper repository ordering:
 
-2. **Resolution Trigger**: Before Gradle resolves dependencies, the `beforeResolve` hook is triggered for each configuration.
+| Scenario | Resolution Flow |
+|----------|----------------|
+| `org.slf4j:slf4j-api:2.0.7` | 1. Try Maven Central (success)<br>**STOP** - no OCI call needed |
+| `com.example:my-lib:1.0.0` | 1. Try Maven Central (fail)<br>2. Try OCI (success) |
 
-3. **Dependency Analysis**: For each dependency in the configuration:
-   - Extract `groupId`, `artifactId`, and `version`
-   - Check if artifacts already exist in the local cache
+### Detailed Resolution Flow
 
-4. **Cache Check**: Look for artifacts in the local cache directory:
-   ```
-   PROJECT_ROOT/.gradle/oci-cache/REPOSITORY_NAME/groupId/artifactId/version/
-   ```
+#### 1. **Proxy Server Startup**
+When you configure `mavenOci { url = 'https://registry.com' }`:
+- Plugin starts local HTTP server on `http://localhost:RANDOM_PORT/maven/`
+- Maven repository is configured to point to this proxy URL
+- Works naturally with Gradle's resolution order
 
-5. **OCI Resolution** (if not cached):
-   - Build OCI reference using the mapping algorithm
-   - Create ORAS registry client with appropriate authentication
-   - Attempt to pull the artifact from the OCI registry
-   - If successful, organize files in Maven repository structure
+#### 2. **Request Interception**
+When Gradle makes HTTP requests like:
+```
+GET http://localhost:8543/maven/com/example/my-lib/1.0.0/my-lib-1.0.0.jar
+```
 
-6. **File Organization**: Downloaded artifacts are organized as:
-   ```
-   cache/groupId/artifactId/version/
-   ├── artifactId-version.jar
-   ├── artifactId-version.pom
-   ├── artifactId-version-sources.jar    (if available)
-   └── artifactId-version-javadoc.jar    (if available)
-   ```
+The proxy:
+- Parses the Maven coordinate: `com.example:my-lib:1.0.0`
+- Converts to OCI reference: `registry.com/com-example/my-lib:1.0.0`
+- Uses ORAS Java SDK to fetch from OCI registry **on-demand**
 
-7. **POM Generation**: If no POM file is included in the OCI artifact, a minimal POM is generated with basic metadata.
+#### 3. **Artifact Streaming**
+- Downloads artifacts to temporary directory
+- Streams artifact bytes directly back via HTTP response
+- Sets appropriate `Content-Type` headers
+- Caches in-memory for build session (optional)
 
-8. **Gradle Integration**: Gradle continues its normal resolution process using the cached files as if they came from a standard Maven repository.
+#### 4. **Error Handling**
+- **Artifact not found in OCI**: Returns HTTP 404, Gradle continues to next repository
+- **Network failure**: Returns HTTP 500, Gradle continues to next repository  
+- **Invalid request**: Returns HTTP 400, request rejected
 
-### Error Handling and Fallbacks
+### Performance Benefits
 
-The resolution process is designed to be resilient:
+✅ **True Lazy Resolution**: Only resolves artifacts when Gradle actually requests them  
+✅ **Repository Order Respect**: No unnecessary OCI calls for Maven Central artifacts  
+✅ **Network Efficiency**: Dramatic reduction in network calls for mixed dependency trees  
+✅ **Memory Efficiency**: No persistent cache directories to manage  
+✅ **Build Speed**: Faster builds, especially for projects with many standard dependencies  
 
-- **Network Failures**: Logged but don't break the build
-- **Authentication Issues**: Fall back to anonymous access if possible
-- **Missing Artifacts**: Continue with other repositories in the chain
-- **Invalid OCI References**: Skip and try other sources
-- **Registry Unavailable**: Gracefully degrade to other repositories
+### Request Flow Examples
 
-### Caching Strategy
+#### Example 1: Standard Dependency (slf4j-api)
+```bash
+repositories {
+    mavenCentral()                    # Checked FIRST
+    mavenOci { url = '...' }         # Only if needed
+}
 
-The plugin uses a sophisticated caching strategy:
+dependencies {
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+}
+```
 
-- **Location**: `PROJECT_ROOT/.gradle/oci-cache/REPOSITORY_NAME/`
-- **Persistence**: Survives `gradle clean` operations
-- **Structure**: Standard Maven repository layout
-- **Performance**: Cached artifacts are reused across builds
-- **Cleanup**: Temporary download directories are cleaned up promptly
+**Resolution:**
+1. Gradle tries Maven Central → **FOUND** ✅
+2. **Proxy never called** → Zero unnecessary OCI network calls
 
-### Performance Considerations
+#### Example 2: OCI Dependency (my-lib)  
+```bash
+dependencies {
+    implementation 'com.example:my-lib:1.0.0'
+}
+```
 
-- **Parallel Resolution**: Multiple dependencies can be resolved concurrently
-- **Incremental Downloads**: Only missing artifacts are downloaded
-- **Connection Reuse**: Registry connections are reused when possible
-- **Timeout Handling**: Reasonable timeouts prevent hanging builds
-- **Selective Resolution**: Only attempts OCI resolution for configured repositories
+**Resolution:**
+1. Gradle tries Maven Central → **404 Not Found**
+2. Gradle tries OCI proxy → **GET http://localhost:8543/maven/...**
+3. Proxy converts to OCI: `registry.com/com-example/my-lib:1.0.0`
+4. ORAS SDK fetches artifact → **HTTP 200 + JAR bytes**
+
+### Lifecycle Management
+
+The proxy server is automatically managed:
+
+- **Startup**: Dynamic port allocation avoids conflicts
+- **Runtime**: Thread-safe concurrent request handling  
+- **Session Caching**: Optional in-memory cache for repeated requests
+- **Shutdown**: Automatic cleanup when Gradle build finishes
 
 ## Plugin Tasks
 

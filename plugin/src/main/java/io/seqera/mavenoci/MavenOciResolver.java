@@ -16,15 +16,15 @@
 
 package io.seqera.mavenoci;
 
-import land.oras.ContainerRef;
-import land.oras.Registry;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import land.oras.ContainerRef;
+import land.oras.Registry;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 
 /**
  * Resolver that retrieves Maven artifacts from OCI registries using the ORAS protocol.
@@ -113,7 +113,7 @@ public class MavenOciResolver {
             
             // Create OCI reference from Maven coordinates
             String ociRef = buildOciReference(groupId, artifactId, version);
-            logger.debug("Built OCI reference: {}", ociRef);
+            logger.debug("Built OCI reference for {}:{}:{} -> {}", groupId, artifactId, version, ociRef);
             
             // Create registry client
             Registry registry = createRegistry();
@@ -128,7 +128,7 @@ public class MavenOciResolver {
             logger.debug("Pulling artifacts from OCI registry: {}", ociRef);
             registry.pullArtifact(ref, targetDir, false);
             
-            logger.debug("Successfully pulled artifacts from OCI registry");
+            logger.debug("Successfully pulled artifacts from OCI registry: {}", ociRef);
             
             // Just return true - file mapping is handled by OciMavenRepositoryFactory.moveArtifactFiles()
             logger.debug("Successfully resolved Maven artifacts from OCI registry");

@@ -43,34 +43,77 @@ The plugin follows a standard Gradle plugin architecture with these key componen
 
 #### Publishing Components
 - **MavenOciPublishPlugin** - Main plugin class that applies the plugin, creates DSL extension, and generates publishing tasks
-- **MavenOciPublishingExtension** - Provides the `oci` DSL block for configuration and repository registration
+- **MavenOciPublishingExtension** - Provides the `mavenOci` DSL block for configuration and repository registration
 - **MavenOciPublication** - Domain object representing what to publish (similar to MavenPublication)
 - **MavenOciRepository** - Domain object representing where to publish (OCI registry configuration for publishing)
 - **PublishToOciRepositoryTask** - Task implementation that performs the actual publishing using ORAS Java SDK
 
-#### Dependency Resolution Components
-- **MavenOciRepositoryFactory** - Creates Maven repositories backed by OCI registries with transparent caching
+#### **NEW: HTTP Proxy Architecture Components**
+- **MavenOciProxy** - HTTP server that bridges Maven repository requests to OCI registry resolution
+- **MavenArtifactRequest** - Parser for Maven repository HTTP request paths and coordinates
+- **MavenOciRepositoryFactory** - Creates HTTP proxy servers for OCI-backed Maven repositories
 - **MavenOciResolver** - Core resolver that handles OCI artifact downloading using ORAS protocol
 - **MavenOciGroupSanitizer** - Utility for mapping Maven group IDs to OCI-compliant repository names
 - **MavenOciRepositorySpec** - Domain object for OCI repository specifications used in dependency resolution
-- **MavenOciRegistryUriParser** - Utility for parsing and extracting information from OCI registry URLs
 
-### Plugin Flow
+### Revolutionary HTTP Proxy Architecture
 
-#### Publishing Flow
+#### Key Innovation: Eliminating Pre-Resolution
+
+**Key Innovation:** HTTP proxy architecture provides efficient OCI resolution that respects Gradle's repository ordering and eliminates unnecessary network calls.
+
+**Solution:** HTTP proxy architecture that makes OCI repositories participate naturally in Gradle's standard repository resolution order.
+
+#### New Architecture Flow
+
+```
+User Configuration → HTTP Proxy Server → Gradle Repository → Normal Resolution Chain
+```
+
+#### Publishing Flow (Unchanged)
 1. Plugin applies and creates `mavenOci` method in `publishing.repositories`
 2. Users configure repositories using `publishing { repositories { mavenOci { name = 'name' } } }` syntax
 3. After project evaluation, plugin creates publishing tasks for each publication-repository combination
 4. Tasks use ORAS Java SDK to push Maven artifacts to OCI registries with proper media types
 
-#### Dependency Resolution Flow
-1. Users configure OCI repositories using `repositories { mavenOci { url = "..."; insecure = true } }`
-2. Plugin installs hooks into Gradle's dependency resolution system
-3. Before dependency resolution, hooks check each dependency against OCI registries
-4. Maven coordinates are mapped to OCI references (e.g., `com.example:lib:1.0` → `registry.com/com-example/lib:1.0`)
-5. ORAS Java SDK attempts to pull artifacts from OCI registry
-6. Downloaded artifacts are cached locally in Maven repository structure
-7. Gradle continues normal resolution using cached files
+#### **NEW: HTTP Proxy Dependency Resolution Flow**
+1. Users configure OCI repositories using `repositories { mavenOci { url = "..." } }`
+2. Plugin starts local HTTP proxy server: `http://localhost:RANDOM_PORT/maven/`
+3. Maven repository configured to point to proxy server
+4. **Gradle follows normal repository order** (e.g., mavenCentral first, then OCI)
+5. **Only when Gradle requests artifacts from OCI repository:**
+   - HTTP request hits proxy: `GET /maven/com/example/lib/1.0.0/lib-1.0.0.jar`
+   - Proxy parses Maven coordinates and converts to OCI reference
+   - ORAS Java SDK fetches from OCI registry **on-demand**
+   - Artifact streamed directly back to Gradle via HTTP response
+6. **Session caching** prevents repeated OCI calls during build
+7. **Automatic cleanup** when build finishes
+
+### HTTP Proxy Architecture Benefits
+
+The HTTP proxy approach provides:
+
+| Aspect | Benefit |
+|--------|---------|
+| **Network Calls** | Only OCI dependencies call OCI |
+| **Repository Order** | Natural Gradle order respected |
+| **Maven Central Dependencies** | Zero unnecessary OCI calls |
+| **Architecture** | Simple HTTP streaming |
+| **Performance** | Fast lazy on-demand resolution |
+
+### Repository Order Example
+
+**Configuration:**
+```gradle
+repositories {
+    mavenCentral()                    // Checked FIRST
+    mavenOci { url = 'registry.com' } // Checked SECOND
+}
+```
+
+**Resolution Flow:**
+- **`org.slf4j:slf4j-api:2.0.7`**: Try Maven Central (success) → **STOP** (no OCI call needed)
+- **`com.example:my-lib:1.0.0`**: Try Maven Central (fail) → Try OCI (success)
 
 ### Key Dependencies
 

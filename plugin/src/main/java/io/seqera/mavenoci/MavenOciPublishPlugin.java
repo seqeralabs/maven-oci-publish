@@ -277,17 +277,23 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
                         return ociRepo;
                         
                     } else {
-                        // For dependency resolution - create Maven repository backed by OCI
-                        org.gradle.api.artifacts.repositories.MavenArtifactRepository mavenRepo = repositories.maven(mavenRepoAction -> {
-                            // Set the correct name initially so factory doesn't need to change it
-                            mavenRepoAction.setName(repositoryName);
-                        });
-                        
                         // Create OCI spec with the generated name
                         MavenOciRepositorySpec spec = project.getObjects().newInstance(MavenOciRepositorySpec.class, repositoryName);
                         if (configureAction != null) {
                             org.gradle.util.internal.ConfigureUtil.configure(configureAction, spec);
                         }
+                        
+                        // Get the OCI registry URL for display name
+                        String registryUrl = spec.getUrl().getOrNull();
+                        String displayName = registryUrl != null && !registryUrl.trim().isEmpty() 
+                            ? repositoryName + " (OCI: " + registryUrl + ")"
+                            : repositoryName;
+                        
+                        // For dependency resolution - create Maven repository backed by OCI
+                        org.gradle.api.artifacts.repositories.MavenArtifactRepository mavenRepo = repositories.maven(mavenRepoAction -> {
+                            // Set descriptive name that includes original OCI URL for better error messages
+                            mavenRepoAction.setName(displayName);
+                        });
                         
                         // Use factory to create OCI-backed Maven repository
                         MavenOciRepositoryFactory.createOciMavenRepository(spec, mavenRepo, project);

@@ -54,9 +54,11 @@ class MavenOciRepositoryFactoryTest extends Specification {
         then:
         1 * mavenRepo.setUrl(_) >> { args ->
             def uri = args[0]
-            assert uri.toString().contains(".gradle/oci-cache/testRepo")
+            // Should be localhost HTTP proxy URL, not cache directory
+            assert uri.toString().startsWith("http://localhost:")
+            assert uri.toString().endsWith("/maven/")
         }
-        0 * mavenRepo.setAllowInsecureProtocol(_) // Should not be called for secure mode
+        1 * mavenRepo.setAllowInsecureProtocol(true) // Always called for localhost proxy
     }
 
     def "should create OCI-backed Maven repository with insecure protocol"() {
@@ -68,11 +70,16 @@ class MavenOciRepositoryFactoryTest extends Specification {
         MavenOciRepositoryFactory.createOciMavenRepository(spec, mavenRepo, project)
 
         then:
-        1 * mavenRepo.setUrl(_)
+        1 * mavenRepo.setUrl(_) >> { args ->
+            def uri = args[0]
+            // Should be localhost HTTP proxy URL
+            assert uri.toString().startsWith("http://localhost:")
+            assert uri.toString().endsWith("/maven/")
+        }
         1 * mavenRepo.setAllowInsecureProtocol(true)
     }
 
-    def "should create cache directory in project .gradle directory"() {
+    def "should start HTTP proxy server for OCI repository"() {
         given:
         def mavenRepo = Mock(MavenArtifactRepository)
 
@@ -80,9 +87,16 @@ class MavenOciRepositoryFactoryTest extends Specification {
         MavenOciRepositoryFactory.createOciMavenRepository(spec, mavenRepo, project)
 
         then:
-        def expectedCacheDir = tempDir.resolve(".gradle/oci-cache/testRepo")
-        Files.exists(expectedCacheDir)
-        Files.isDirectory(expectedCacheDir)
+        1 * mavenRepo.setUrl(_) >> { args ->
+            def uri = args[0]
+            // Verify that an HTTP proxy server is actually started
+            def url = new URL(uri.toString())
+            assert url.protocol == "http"
+            assert url.host == "localhost"
+            assert url.port > 0
+            assert url.path == "/maven/"
+        }
+        1 * mavenRepo.setAllowInsecureProtocol(true)
     }
 
     def "should handle repository creation errors gracefully"() {
@@ -100,21 +114,31 @@ class MavenOciRepositoryFactoryTest extends Specification {
         1 * mavenRepo.setUrl(_)
     }
 
-    def "should create cache directory structure for different repository names"() {
+    def "should create separate HTTP proxy servers for different repositories"() {
         given:
         def mavenRepo = Mock(MavenArtifactRepository)
         def spec1 = project.objects.newInstance(MavenOciRepositorySpec, "repo1")
         spec1.url.set("https://registry1.com")
         def spec2 = project.objects.newInstance(MavenOciRepositorySpec, "repo2")
         spec2.url.set("https://registry2.com")
+        def ports = [] as Set
 
         when:
         MavenOciRepositoryFactory.createOciMavenRepository(spec1, mavenRepo, project)
         MavenOciRepositoryFactory.createOciMavenRepository(spec2, mavenRepo, project)
 
         then:
-        Files.exists(tempDir.resolve(".gradle/oci-cache/repo1"))
-        Files.exists(tempDir.resolve(".gradle/oci-cache/repo2"))
-        2 * mavenRepo.setUrl(_)
+        2 * mavenRepo.setUrl(_) >> { args ->
+            def uri = args[0]
+            def url = new URL(uri.toString())
+            assert url.protocol == "http"
+            assert url.host == "localhost"
+            assert url.port > 0
+            assert url.path == "/maven/"
+            ports.add(url.port)
+        }
+        2 * mavenRepo.setAllowInsecureProtocol(true)
+        // Should have different ports for different repositories
+        ports.size() == 2
     }
 }
