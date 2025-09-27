@@ -141,7 +141,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'                           // Enable Java compilation and packaging
-                id 'io.seqera.maven-oci-publish'   // Our OCI publishing plugin
+                id 'io.seqera.maven-oci-registry'   // Our OCI publishing plugin
             }
             
             // Standard Maven coordinates for the published artifact
@@ -197,7 +197,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             group = 'com.example'
@@ -249,7 +249,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             group = 'com.example'
@@ -298,7 +298,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             group = 'com.example'
@@ -365,7 +365,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             group = 'com.example'
@@ -431,7 +431,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'                           // Java plugin for compilation
-                id 'io.seqera.maven-oci-publish'    // OCI publishing plugin
+                id 'io.seqera.maven-oci-registry'    // OCI publishing plugin
             }
             
             group = 'com.example'
@@ -495,7 +495,7 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
             plugins {
                 id 'java'                           // Generate JAR artifacts
                 id 'maven-publish'                  // Standard publishing
-                id 'io.seqera.maven-oci-publish'   // OCI publishing with media types
+                id 'io.seqera.maven-oci-registry'   // OCI publishing with media types
             }
             
             group = 'com.example'

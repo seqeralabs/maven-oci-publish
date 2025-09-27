@@ -87,7 +87,7 @@ class MavenOciLifecycleIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'                           // Provides Java compilation and JAR creation
-                id 'io.seqera.maven-oci-publish'   // Our custom OCI publishing plugin
+                id 'io.seqera.maven-oci-registry'   // Our custom OCI publishing plugin
             }
             
             // Standard Maven coordinates for the published artifact
@@ -230,7 +230,7 @@ class MavenOciLifecycleIntegrationTest extends Specification {
             plugins {
                 id 'java'                           // Java compilation support
                 id 'application'                    // Application plugin
-                id 'io.seqera.maven-oci-publish'   // OCI plugin for repository support
+                id 'io.seqera.maven-oci-registry'   // OCI plugin for repository support
             }
             
             group = 'com.example.consumer'
@@ -295,7 +295,7 @@ class MavenOciLifecycleIntegrationTest extends Specification {
             plugins {
                 id 'java'
                 id 'maven-publish'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             group = 'com.example'
@@ -422,7 +422,7 @@ class MavenOciLifecycleIntegrationTest extends Specification {
             plugins {
                 id 'java'
                 id 'application'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             group = 'com.example'

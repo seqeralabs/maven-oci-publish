@@ -45,7 +45,7 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             group = 'com.example'
@@ -102,7 +102,7 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             group = 'com.example'
@@ -149,7 +149,7 @@ class MavenOciPublishPluginIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             // Plugin now integrates with publishing.repositories

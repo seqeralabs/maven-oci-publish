@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'io.seqera.maven-oci-publish'
+    id 'io.seqera.maven-oci-registry'
 }
 
 def getRequiredProperty(String propertyName) {
@@ -41,8 +41,8 @@ publishing {
             
             pom {
                 name = 'Shared Library'
-                description = 'A shared library published via maven-oci-publish plugin'
-                url = 'https://github.com/pditommaso/maven-oci-publish'
+                description = 'A shared library published via maven-oci-registry plugin'
+                url = 'https://github.com/pditommaso/maven-oci-registry'
                 
                 licenses {
                     license {

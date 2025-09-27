@@ -63,15 +63,15 @@ dependencies {
 }
 
 gradlePlugin {
-    website = 'https://github.com/seqeralabs/maven-oci-publish'
-    vcsUrl = 'https://github.com/seqeralabs/maven-oci-publish'
+    website = 'https://github.com/seqeralabs/maven-oci-registry'
+    vcsUrl = 'https://github.com/seqeralabs/maven-oci-registry'
     
     // Define the plugin
     plugins {
         mavenOciPublish {
-            id = 'io.seqera.maven-oci-publish'
+            id = 'io.seqera.maven-oci-registry'
             implementationClass = 'io.seqera.mavenoci.MavenOciPublishPlugin'
-            displayName = 'Maven OCI Publish Plugin'
+            displayName = 'Maven OCI Registry Plugin'
             description = 'A Gradle plugin for bidirectional Maven artifact management with OCI-compliant registries'
             tags = ['maven', 'oci', 'registry', 'docker', 'publishing']
         }

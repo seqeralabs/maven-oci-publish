@@ -1,6 +1,6 @@
-# Publisher Example - Maven OCI Publish Plugin
+# Publisher Example - Maven OCI Registry Plugin
 
-This example demonstrates how to publish a Java library to Docker Hub using the Maven OCI Publish Plugin.
+This example demonstrates how to publish a Java library to a OCI Registry.
 
 ## 🎯 What This Example Does
 

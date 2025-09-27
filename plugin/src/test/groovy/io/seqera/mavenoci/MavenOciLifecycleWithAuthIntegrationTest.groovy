@@ -119,7 +119,7 @@ class MavenOciLifecycleWithAuthIntegrationTest extends Specification {
         buildFile << """
             plugins {
                 id 'java'
-                id 'io.seqera.maven-oci-publish'
+                id 'io.seqera.maven-oci-registry'
             }
             
             group = 'com.example'

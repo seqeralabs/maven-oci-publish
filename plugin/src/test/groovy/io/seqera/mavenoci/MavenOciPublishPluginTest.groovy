@@ -42,8 +42,8 @@ class MavenOciPublishPluginTest extends Specification {
 
         when: "The Maven OCI Publish plugin is applied to the project"
         // This simulates applying the plugin via build.gradle:
-        // plugins { id 'io.seqera.maven-oci-publish' }
-        project.plugins.apply("io.seqera.maven-oci-publish")
+        // plugins { id 'io.seqera.maven-oci-registry' }
+        project.plugins.apply("io.seqera.maven-oci-registry")
 
         then: "The plugin should integrate with the maven-publish plugin"
         // Validates that the plugin integrates with maven-publish properly

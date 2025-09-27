@@ -31,7 +31,7 @@ class OciMavenRepositoryIntegrationTest extends Specification {
         given: "A project with the Maven OCI plugin applied"
         Project project = ProjectBuilder.builder().build()
         project.pluginManager.apply('java')
-        project.pluginManager.apply('io.seqera.maven-oci-publish')
+        project.pluginManager.apply('io.seqera.maven-oci-registry')
         
         and: "Basic project configuration"
         project.group = 'com.example'
@@ -89,7 +89,7 @@ class OciMavenRepositoryIntegrationTest extends Specification {
         given: "A project with Maven OCI plugin and OCI repository"
         Project project = ProjectBuilder.builder().build()
         project.pluginManager.apply('java')
-        project.pluginManager.apply('io.seqera.maven-oci-publish')
+        project.pluginManager.apply('io.seqera.maven-oci-registry')
         
         project.group = 'com.example'
         project.version = '2.0.0'
@@ -127,7 +127,7 @@ class OciMavenRepositoryIntegrationTest extends Specification {
         when: "Creating a project and applying the plugin"
         Project project = ProjectBuilder.builder().build()
         project.pluginManager.apply('java')
-        project.pluginManager.apply('io.seqera.maven-oci-publish')
+        project.pluginManager.apply('io.seqera.maven-oci-registry')
         
         project.group = 'com.example'
         project.version = '1.0.0'
@@ -138,7 +138,7 @@ class OciMavenRepositoryIntegrationTest extends Specification {
         noExceptionThrown()
         
         and: "The plugin is applied"
-        project.plugins.hasPlugin('io.seqera.maven-oci-publish')
+        project.plugins.hasPlugin('io.seqera.maven-oci-registry')
         
         and: "Maven publish plugin is also applied"
         project.plugins.hasPlugin('maven-publish')
@@ -152,7 +152,7 @@ class OciMavenRepositoryIntegrationTest extends Specification {
     def "oci repository builds correct OCI references"() {
         given: "An OCI Maven repository"
         Project project = ProjectBuilder.builder().build()
-        project.pluginManager.apply('io.seqera.maven-oci-publish')
+        project.pluginManager.apply('io.seqera.maven-oci-registry')
         def repo = project.objects.newInstance(MavenOciArtifactRepository, 'test')
         
         when: "Configuring with URL and namespace"
@@ -168,7 +168,7 @@ class OciMavenRepositoryIntegrationTest extends Specification {
         given: "A project with insecure OCI repository"
         Project project = ProjectBuilder.builder().build()
         project.pluginManager.apply('java')
-        project.pluginManager.apply('io.seqera.maven-oci-publish')
+        project.pluginManager.apply('io.seqera.maven-oci-registry')
         
         when: "Configuring insecure OCI repository"
         project.extensions.configure(PublishingExtension) { publishing ->

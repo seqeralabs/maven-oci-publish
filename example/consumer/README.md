@@ -1,6 +1,6 @@
-# Consumer Example - Maven OCI Publish Plugin
+# Consumer Example - Maven OCI Registry Plugin
 
-This example demonstrates how to consume a Java library published to Docker Hub using the Maven OCI Publish Plugin.
+This example demonstrates how to consume a Java library published to a OCI Registry.
 
 ## 🎯 What This Example Does
 
@@ -11,7 +11,7 @@ This example demonstrates how to consume a Java library published to Docker Hub 
 
 ## ✅ Current Capabilities
 
-This example demonstrates the new `mavenOci` syntax for consuming libraries from OCI registries. The Maven OCI Publish Plugin now supports both **publishing** and **consuming** artifacts from OCI registries using standard Gradle dependency syntax.
+This example demonstrates the new `mavenOci` syntax for consuming libraries from OCI registries. The Maven OCI Registry Plugin now supports both **publishing** and **consuming** artifacts from OCI registries using standard Gradle dependency syntax.
 
 ## ⚠️ Important: Repository Must Exist
 
@@ -134,5 +134,5 @@ Once proper OCI artifact resolution is implemented (via proxy, plugin, or native
 ## 📚 References
 
 - [ORAS](https://oras.land/) - OCI Registry as Storage
-- [Maven OCI Publish Plugin](../../README.md) - Publisher side
+- [Maven OCI Registry Plugin](../../README.md) - Publisher side
 - [Docker Hub](https://hub.docker.com/) - OCI Registry

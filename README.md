@@ -1,4 +1,4 @@
-# Maven OCI Publish Plugin
+# Maven OCI Registry Plugin
 
 A Gradle plugin that enables **bidirectional** Maven artifact management with OCI-compliant registries using the [ORAS (OCI Registry as Storage)](https://oras.land/) protocol.
 
@@ -22,7 +22,7 @@ A Gradle plugin that enables **bidirectional** Maven artifact management with OC
 ```gradle
 plugins {
     id 'java'
-    id 'io.seqera.maven-oci-publish'
+    id 'io.seqera.maven-oci-registry'
 }
 ```
 
@@ -182,7 +182,7 @@ mavenOci {
 
 ## Maven ↔ OCI Coordinate Mapping and Resolution
 
-The Maven OCI Publish Plugin enables storing and retrieving Maven artifacts in OCI (Open Container Initiative) registries using the ORAS (OCI Registry as Storage) protocol. This requires a systematic mapping between Maven's coordinate system and OCI's naming conventions.
+The Maven OCI Registry Plugin enables storing and retrieving Maven artifacts in OCI (Open Container Initiative) registries using the ORAS (OCI Registry as Storage) protocol. This requires a systematic mapping between Maven's coordinate system and OCI's naming conventions.
 
 ### Coordinate Mapping
 
@@ -283,7 +283,7 @@ publishing {
 
 ## Resolution Architecture: HTTP Proxy Approach
 
-The Maven OCI Publish Plugin uses an **HTTP proxy architecture** that provides efficient dependency resolution while maintaining full compatibility with Gradle's dependency resolution system.
+The Maven OCI Registry Plugin uses an **HTTP proxy architecture** that provides efficient dependency resolution while maintaining full compatibility with Gradle's dependency resolution system.
 
 ### Core Architecture
 

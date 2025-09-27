@@ -11,7 +11,7 @@ This is a Gradle plugin that enables **bidirectional** Maven artifact management
 
 The plugin seamlessly integrates with Gradle's existing repository and dependency system, allowing OCI registries to be used alongside traditional Maven repositories.
 
-Project inspired to https://github.com/Tosan/oras-maven-plugin.
+Project inspired by https://github.com/Tosan/oras-maven-plugin.
 
 ## Build and Test Commands
 

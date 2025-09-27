@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'application'
-    id 'io.seqera.maven-oci-publish'  // For consumer support
+    id 'io.seqera.maven-oci-registry'  // For consumer support
 }
 
 group = 'io.seqera'
