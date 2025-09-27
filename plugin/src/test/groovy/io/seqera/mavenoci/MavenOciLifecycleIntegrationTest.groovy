@@ -286,4 +286,191 @@ class MavenOciLifecycleIntegrationTest extends Specification {
         return consumerDir
     }
     
+    def "should publish POM files and checksums with artifacts"() {
+        given: "a Maven project with comprehensive metadata"
+        def registryUrl = "localhost:${registry.getMappedPort(PORT)}"
+        
+        // Create test library with more comprehensive POM metadata
+        getBuildFile() << """
+            plugins {
+                id 'java'
+                id 'maven-publish'
+                id 'io.seqera.maven-oci-publish'
+            }
+            
+            group = 'com.example'
+            version = '2.0.0'
+            
+            repositories {
+                mavenCentral()
+            }
+            
+            dependencies {
+                implementation 'org.slf4j:slf4j-api:1.7.36'
+                testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
+            }
+            
+            java {
+                withSourcesJar()
+                withJavadocJar()
+            }
+            
+            publishing {
+                publications {
+                    maven(MavenPublication) {
+                        from components.java
+                        artifactId = 'test-library-with-deps'
+                        
+                        pom {
+                            name = 'Test Library With Dependencies'
+                            description = 'A test library with transitive dependencies'
+                            url = 'https://github.com/example/test-library'
+                            
+                            licenses {
+                                license {
+                                    name = 'MIT License'
+                                    url = 'https://opensource.org/licenses/MIT'
+                                }
+                            }
+                            
+                            developers {
+                                developer {
+                                    id = 'test-dev'
+                                    name = 'Test Developer'
+                                    email = 'dev@example.com'
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                repositories {
+                    mavenOci {
+                        name = 'testRegistry'
+                        url = 'http://${registryUrl}'
+                        insecure = true
+                    }
+                }
+            }
+        """
+        
+        // Create test source with dependency on slf4j
+        def srcDir = new File(projectDir, "src/main/java/com/example/testlib")
+        srcDir.mkdirs()
+        
+        new File(srcDir, "TestLibraryWithDeps.java") << """
+            package com.example.testlib;
+            
+            import org.slf4j.Logger;
+            import org.slf4j.LoggerFactory;
+            
+            public class TestLibraryWithDeps {
+                private static final Logger logger = LoggerFactory.getLogger(TestLibraryWithDeps.class);
+                
+                public static String getVersion() {
+                    return "2.0.0";
+                }
+                
+                public static String getMessage() {
+                    logger.info("Creating test message with SLF4J dependency");
+                    return "Hello from test library with dependencies!";
+                }
+            }
+        """
+        
+        when: "the project is published to OCI registry"
+        def publishResult = GradleRunner.create()
+            .withProjectDir(projectDir)
+            .withArguments(['publishMavenPublicationToTestRegistryRepository', '--info', '--stacktrace'])
+            .withPluginClasspath()
+            .withDebug(false)
+            .build()
+            
+        then: "the publication should succeed"
+        publishResult.task(':publishMavenPublicationToTestRegistryRepository').outcome == TaskOutcome.SUCCESS
+        
+        and: "the build output should show POM files and checksums were included"
+        publishResult.output.contains("Added POM file to OCI artifacts")
+        publishResult.output.contains("Publishing 12 artifacts") // JAR + sources + javadoc + POM + 8 checksums
+        
+        when: "a consumer project tries to use the published artifact"
+        def consumerProject = createConsumerWithTransitiveDeps(registryUrl, "test-library-with-deps", "2.0.0")
+        
+        def consumerBuildResult = GradleRunner.create()
+            .withProjectDir(consumerProject)
+            .withArguments(['run', '--info'])
+            .withPluginClasspath()
+            .withDebug(false)
+            .build()
+            
+        then: "the consumer should successfully resolve the artifact with its metadata"
+        consumerBuildResult.task(':run').outcome == TaskOutcome.SUCCESS
+        
+        and: "the consumer should have access to transitive dependencies from the POM"
+        consumerBuildResult.output.contains("test message with SLF4J dependency")
+        
+        and: "POM file should be resolved from OCI registry"
+        consumerBuildResult.output.contains("Found POM file") || consumerBuildResult.output.contains("pom-default.xml")
+    }
+    
+    private File createConsumerWithTransitiveDeps(String registryUrl, String artifactId, String version) {
+        def consumerDir = new File(projectDir.parentFile, "consumer-with-deps-${System.currentTimeMillis()}")
+        consumerDir.mkdirs()
+        
+        // Create consumer build.gradle
+        new File(consumerDir, "build.gradle") << """
+            plugins {
+                id 'java'
+                id 'application'
+                id 'io.seqera.maven-oci-publish'
+            }
+            
+            group = 'com.example'
+            version = '1.0.0'
+            
+            repositories {
+                mavenCentral()  // For transitive dependencies
+                mavenOci {
+                    url = 'http://${registryUrl}'
+                    insecure = true
+                }
+            }
+            
+            application {
+                mainClass = 'com.example.consumer.ConsumerApp'
+            }
+            
+            dependencies {
+                implementation 'com.example:${artifactId}:${version}'
+                // SLF4J implementation for testing transitive dependencies
+                implementation 'ch.qos.logback:logback-classic:1.2.12'
+            }
+        """
+        
+        new File(consumerDir, "settings.gradle") << """
+            rootProject.name = 'consumer-with-deps'
+        """
+        
+        // Create consumer source that uses the library
+        def consumerSrcDir = new File(consumerDir, "src/main/java/com/example/consumer")
+        consumerSrcDir.mkdirs()
+        
+        new File(consumerSrcDir, "ConsumerApp.java") << """
+            package com.example.consumer;
+            
+            import com.example.testlib.TestLibraryWithDeps;
+            
+            public class ConsumerApp {
+                public static void main(String[] args) {
+                    System.out.println("Consumer app starting...");
+                    System.out.println("Library version: " + TestLibraryWithDeps.getVersion());
+                    System.out.println("Library message: " + TestLibraryWithDeps.getMessage());
+                    System.out.println("✅ Successfully consumed library with transitive dependencies from OCI registry!");
+                }
+            }
+        """
+        
+        return consumerDir
+    }
+    
 }

@@ -393,10 +393,11 @@ public class MavenOciProxy {
             return Files.readAllBytes(exactFile);
         }
         
-        // For POM files, also try without version suffix (common in OCI artifacts)
+        // For POM files, try various naming patterns used in OCI artifacts
         if (request.getFileType().equals("pom")) {
             // Try various POM filename patterns
             String[] pomVariations = {
+                "pom-default.xml",  // Gradle's default generated POM name
                 request.getArtifactId() + ".pom",
                 request.getArtifactId() + "-" + request.getVersion() + ".pom"
             };
@@ -409,19 +410,44 @@ public class MavenOciProxy {
                 }
             }
             
-            // If no POM file found, check if there's any JAR file to generate a minimal POM
+            // If no POM file found, this is now an error since we should be publishing POMs
+            logger.error("POM file not found for artifact: {} in OCI registry. " +
+                        "This indicates the artifact was published without proper Maven metadata. " +
+                        "Please ensure your publication includes POM files.", request.getCoordinate());
+            return null; // Return null to indicate POM not found rather than generating a minimal one
+        }
+        
+        // For checksum files (.sha1, .md5), look for them with various naming patterns
+        if (request.getFileType().equals("sha1") || request.getFileType().equals("md5")) {
+            // The request is for something like "lib-1.0.0.jar.sha1"
+            // But the actual artifact in OCI might be named differently
+            String baseFileName = request.getFileName();
+            
             try {
-                boolean hasJar = Files.list(tempDir)
-                    .anyMatch(path -> path.getFileName().toString().endsWith(".jar") && 
-                             !path.getFileName().toString().contains("sources") &&
-                             !path.getFileName().toString().contains("javadoc"));
+                // Find any file that ends with the desired checksum extension
+                String checksumExtension = "." + request.getFileType();
                 
-                if (hasJar) {
-                    logger.info("No POM file found in OCI artifacts, generating minimal POM for: {}", request.getCoordinate());
-                    return generateMinimalPom(request.getGroupId(), request.getArtifactId(), request.getVersion());
+                Path checksumFile = Files.list(tempDir)
+                    .filter(path -> path.getFileName().toString().endsWith(checksumExtension))
+                    .filter(path -> {
+                        String fileName = path.getFileName().toString();
+                        // Match files that contain the artifact type we're looking for
+                        if (baseFileName.contains(".jar.")) {
+                            return fileName.contains(".jar" + checksumExtension);
+                        } else if (baseFileName.contains(".pom.")) {
+                            return fileName.contains(".xml" + checksumExtension) || fileName.contains(".pom" + checksumExtension);
+                        }
+                        return false;
+                    })
+                    .findFirst()
+                    .orElse(null);
+                    
+                if (checksumFile != null && Files.exists(checksumFile)) {
+                    logger.info("Found checksum file: {}", checksumFile);
+                    return Files.readAllBytes(checksumFile);
                 }
             } catch (IOException e) {
-                logger.warn("Error checking for JAR files: {}", e.getMessage());
+                logger.warn("Error searching for checksum files: {}", e.getMessage());
             }
         }
         
@@ -458,35 +484,6 @@ public class MavenOciProxy {
         
         logger.warn("Artifact file not found in temp directory: {} (looking for: {})", tempDir, expectedFileName);
         return null;
-    }
-    
-    /**
-     * Generates a minimal POM file content for an artifact that doesn't include one.
-     * 
-     * @param groupId the Maven group ID
-     * @param artifactId the Maven artifact ID  
-     * @param version the artifact version
-     * @return the POM file content as bytes
-     */
-    private byte[] generateMinimalPom(String groupId, String artifactId, String version) {
-        String pomContent = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                           "<project xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\" " +
-                           "xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
-                           "  <modelVersion>4.0.0</modelVersion>\n" +
-                           "  <groupId>" + groupId + "</groupId>\n" +
-                           "  <artifactId>" + artifactId + "</artifactId>\n" +
-                           "  <version>" + version + "</version>\n" +
-                           "  <packaging>jar</packaging>\n" +
-                           "  <description>Artifact resolved from OCI registry</description>\n" +
-                           "  \n" +
-                           "  <!-- Generated by Maven OCI Publish Plugin -->\n" +
-                           "  <properties>\n" +
-                           "    <maven.compiler.source>17</maven.compiler.source>\n" +
-                           "    <maven.compiler.target>17</maven.compiler.target>\n" +
-                           "  </properties>\n" +
-                           "</project>\n";
-        
-        return pomContent.getBytes();
     }
     
     /**

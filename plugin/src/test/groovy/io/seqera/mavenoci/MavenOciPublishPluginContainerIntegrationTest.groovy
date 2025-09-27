@@ -479,9 +479,9 @@ class MavenOciPublishPluginContainerIntegrationTest extends Specification {
         // The task should complete successfully without trying to connect to the registry
         result.task(":publishMavenPublicationToNonExistentRegistryRepository").outcome == TaskOutcome.SUCCESS
         
-        and: "the output should indicate no artifacts were found"
-        // Verify that the plugin detected the absence of artifacts and handled it gracefully
-        result.output.contains("No artifacts to publish")
+        and: "the output should indicate no meaningful artifacts were found"
+        // Verify that the plugin detected the absence of meaningful artifacts and handled it gracefully
+        result.output.contains("No meaningful artifacts to publish")
     }
 
     def "publishes artifacts with correct media types"() {

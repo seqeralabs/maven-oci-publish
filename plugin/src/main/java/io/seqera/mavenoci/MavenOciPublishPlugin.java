@@ -16,6 +16,12 @@
 
 package io.seqera.mavenoci;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import org.gradle.api.Plugin;
@@ -753,6 +759,15 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
             } catch (Exception e) {
                 // javadocJar task may not exist, that's ok
             }
+            
+            // Depend on POM generation task to ensure POM file exists
+            String pomTaskName = "generatePomFileFor" + capitalize(publication.getName()) + "Publication";
+            try {
+                task.dependsOn(project.getTasks().named(pomTaskName));
+                logger.debug("Added dependency on POM generation task: {}", pomTaskName);
+            } catch (Exception e) {
+                logger.debug("POM generation task '{}' may not exist yet, that's ok", pomTaskName);
+            }
         });
         
         // Wire the task to the lifecycle task
@@ -765,14 +780,118 @@ public class MavenOciPublishPlugin implements Plugin<Project> {
      * Configure artifacts from a Maven publication
      */
     private void configureArtifactsFromPublication(MavenPublication publication, Project project, PublishToOciRepositoryTask task) {
-        // Configure artifacts lazily using providers
+        // Configure artifacts lazily using providers  
         task.getArtifacts().from(project.provider(() -> {
-            return publication.getArtifacts()
+            List<File> allArtifacts = new ArrayList<>();
+            
+            // Add all publication artifacts (JAR, sources, javadoc, etc.)
+            publication.getArtifacts()
                 .stream()
                 .filter(artifact -> artifact.getFile() != null)
                 .map(artifact -> artifact.getFile())
-                .collect(Collectors.toList());
+                .forEach(allArtifacts::add);
+                
+            // Add the generated POM file - it follows a predictable naming pattern
+            String pomFileName = publication.getArtifactId() + "-" + publication.getVersion() + ".pom";
+            
+            // Try common locations for the generated POM file
+            File[] possiblePomLocations = {
+                // Standard Gradle publishing location
+                new File(project.getBuildDir(), "publications/" + publication.getName() + "/pom-default.xml"),
+                // Alternative Maven-style naming in build outputs  
+                new File(project.getBuildDir(), "libs/" + pomFileName),
+                // Generated in build/publications/maven directory
+                new File(project.getBuildDir(), "publications/maven/pom-default.xml")
+            };
+            
+            File pomFile = null;
+            for (File candidate : possiblePomLocations) {
+                if (candidate.exists()) {
+                    pomFile = candidate;
+                    break;
+                }
+            }
+            
+            if (pomFile != null) {
+                allArtifacts.add(pomFile);
+                project.getLogger().info("Added POM file to OCI artifacts: {} ({})", pomFile.getName(), pomFile.getPath());
+            } else {
+                project.getLogger().warn("Could not find generated POM file for publication '{}'. Tried locations:", publication.getName());
+                for (File candidate : possiblePomLocations) {
+                    project.getLogger().warn("  - {}", candidate.getPath());
+                }
+            }
+            
+            // Generate checksums for all artifacts (including POM) that exist
+            List<File> allArtifactsWithChecksums = new ArrayList<>(allArtifacts);
+            for (File artifact : new ArrayList<>(allArtifacts)) {
+                // Only generate checksums for files that actually exist
+                if (artifact.exists() && artifact.isFile() && artifact.length() > 0) {
+                    try {
+                        // Generate SHA1 checksum
+                        File sha1File = generateChecksum(artifact, "SHA-1", ".sha1", project);
+                        if (sha1File != null) {
+                            allArtifactsWithChecksums.add(sha1File);
+                            project.getLogger().debug("Generated SHA1 checksum: {}", sha1File.getName());
+                        }
+                        
+                        // Generate MD5 checksum  
+                        File md5File = generateChecksum(artifact, "MD5", ".md5", project);
+                        if (md5File != null) {
+                            allArtifactsWithChecksums.add(md5File);
+                            project.getLogger().debug("Generated MD5 checksum: {}", md5File.getName());
+                        }
+                    } catch (Exception e) {
+                        project.getLogger().warn("Failed to generate checksums for {}: {}", artifact.getName(), e.getMessage());
+                    }
+                } else {
+                    project.getLogger().debug("Skipping checksum generation for non-existent or empty artifact: {}", artifact.getName());
+                }
+            }
+            
+            return allArtifactsWithChecksums;
         }));
+    }
+    
+    /**
+     * Generate checksum file for an artifact
+     */
+    private File generateChecksum(File artifact, String algorithm, String extension, Project project) {
+        if (!artifact.exists() || artifact.length() == 0) {
+            return null;
+        }
+        
+        try {
+            // Calculate checksum
+            MessageDigest digest = MessageDigest.getInstance(algorithm);
+            try (FileInputStream fis = new FileInputStream(artifact)) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    digest.update(buffer, 0, bytesRead);
+                }
+            }
+            
+            // Convert to hex string
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : digest.digest()) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            
+            // Create checksum file
+            File checksumFile = new File(artifact.getParent(), artifact.getName() + extension);
+            Files.write(checksumFile.toPath(), hexString.toString().getBytes());
+            
+            return checksumFile;
+            
+        } catch (Exception e) {
+            project.getLogger().warn("Failed to generate {} checksum for {}: {}", algorithm, artifact.getName(), e.getMessage());
+            return null;
+        }
     }
     
     private String capitalize(String str) {

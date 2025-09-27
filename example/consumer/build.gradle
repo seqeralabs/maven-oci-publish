@@ -27,7 +27,7 @@ application {
 
 dependencies {
     // Normal Maven dependency using OCI repository!
-    implementation 'io.seqera:shared-library:2.2.0'
+    implementation 'io.seqera:shared-library:2.3.0'
     // This automatically resolves to public.cr.stage-seqera.io/maven/io-seqera/shared-library:2.2.0
     // Repository will be named: public_cr_stage_seqera_io_maven
     

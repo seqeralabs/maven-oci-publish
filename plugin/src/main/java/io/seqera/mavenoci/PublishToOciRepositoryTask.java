@@ -194,8 +194,15 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
             // Create registry client only if we have valid artifacts
             Registry registry = createRegistry();
             
-            // Convert artifacts to LocalPath objects
+            // Convert artifacts to LocalPath objects, filtering out non-existent files
             List<LocalPath> artifactPaths = getArtifacts().getFiles().stream()
+                .filter(file -> {
+                    boolean exists = file.exists() && file.isFile() && file.length() > 0;
+                    if (!exists) {
+                        logger.debug("Skipping non-existent or empty artifact file: {}", file.getName());
+                    }
+                    return exists;
+                })
                 .map(file -> {
                     // Determine media type based on file extension
                     String mediaType = determineMediaType(file.getName());
@@ -207,6 +214,26 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
             if (artifactPaths.isEmpty()) {
                 logger.warn("No artifacts to publish after processing - files may not be accessible");
                 logger.info("Task executed successfully with no accessible artifacts");
+                return;
+            }
+            
+            // Check if we only have POM and checksum files (no meaningful artifacts to publish)
+            // Count meaningful artifacts (exclude POM files and checksums)
+            long meaningfulArtifactCount = getArtifacts().getFiles().stream()
+                .filter(file -> file.exists() && file.isFile() && file.length() > 0)
+                .filter(file -> {
+                    String fileName = file.getName().toLowerCase();
+                    // Exclude POM files and checksums - only count JAR, WAR, EAR, etc.
+                    return !(fileName.endsWith(".pom") || fileName.endsWith(".xml") || 
+                           fileName.endsWith(".sha1") || fileName.endsWith(".md5"));
+                })
+                .count();
+            
+            boolean hasOnlyPomAndChecksums = (meaningfulArtifactCount == 0);
+            
+            if (hasOnlyPomAndChecksums) {
+                logger.warn("No meaningful artifacts to publish - only POM files and checksums found");
+                logger.info("Task executed successfully with minimal artifacts");
                 return;
             }
             
