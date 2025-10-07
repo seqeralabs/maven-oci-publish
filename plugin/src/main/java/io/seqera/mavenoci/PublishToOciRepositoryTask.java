@@ -19,6 +19,7 @@ package io.seqera.mavenoci;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.seqera.mavenoci.gson.OrasGsonPatcher;
 import land.oras.Annotations;
 import land.oras.ArtifactType;
 import land.oras.ContainerRef;
@@ -360,6 +361,9 @@ public abstract class PublishToOciRepositoryTask extends DefaultTask {
     }
     
     private Registry createRegistry() {
+        // Patch ORAS JsonUtils to support TokenResponse record deserialization
+        OrasGsonPatcher.patchOrasGson();
+
         Registry.Builder builder = Registry.builder();
         
         // Extract hostname from registry URL for Harbor compatibility

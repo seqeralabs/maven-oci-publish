@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import io.seqera.mavenoci.gson.OrasGsonPatcher;
 import land.oras.ContainerRef;
 import land.oras.Registry;
 import org.gradle.api.logging.Logger;
@@ -167,6 +168,9 @@ public class MavenOciResolver {
      * Creates registry client with appropriate authentication.
      */
     private Registry createRegistry() {
+        // Patch ORAS JsonUtils to support TokenResponse record deserialization
+        OrasGsonPatcher.patchOrasGson();
+
         Registry.Builder builder = Registry.builder();
         
         if (insecure) {
